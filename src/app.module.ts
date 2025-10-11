@@ -6,6 +6,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { ElevenLabsModule } from './modules/elevenlabs/elevenlabs.module';
 import { LinkupModule } from './modules/linkup/linkup.module';
 import { N8nModule } from './modules/n8n/n8n.module';
+import { AwsModule } from './modules/aws/aws.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -27,6 +28,7 @@ import { AppController } from './app.controller';
     ElevenLabsModule,
     LinkupModule,
     N8nModule,
+    AwsModule,
   ],
   controllers: [AppController],
   providers: [],
