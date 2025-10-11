@@ -1,0 +1,198 @@
+// Prisma Schema para NeuroPlan
+// Generador y proveedor de base de datos
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================================
+// MODELOS PRINCIPALES
+// ==============================================
+
+// Estudiante con necesidades educativas especiales
+model Student {
+  id        String   @id @default(cuid())
+  name      String
+  lastName  String
+  birthDate DateTime
+  grade     String   // "1º ESO", "3º Primaria", etc.
+  
+  // Información de contacto
+  parentName    String?
+  parentEmail   String?
+  parentPhone   String?
+  school        String?
+  
+  // Metadatos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relaciones
+  reports Report[]
+  peis    PEI[]
+  
+  @@map("students")
+}
+
+// Informe médico/psicopedagógico subido
+model Report {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  
+  // Contenido extraído
+  extractedText String?
+  ocrText       String?
+  
+  // Estado de procesamiento
+  status String @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  
+  // Metadatos
+  uploadedAt DateTime @default(now())
+  processedAt DateTime?
+  
+  // Relaciones
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  peis      PEI[]
+  
+  @@map("reports")
+}
+
+// Plan Educativo Individualizado generado
+model PEI {
+  id      String @id @default(cuid())
+  version Int    @default(1)
+  
+  // Contenido del PEI (como JSON strings)
+  summary     String // Resumen ejecutivo
+  diagnosis   String // Diagnóstico y NEE identificadas
+  objectives  String // JSON Array de objetivos SMART
+  adaptations String // JSON Adaptaciones curriculares
+  strategies  String // JSON Estrategias metodológicas
+  evaluation  String // JSON Criterios de evaluación
+  timeline    String // JSON Planificación temporal
+  
+  // Estado y metadatos
+  status    String @default("DRAFT") // DRAFT, REVIEW, APPROVED, ACTIVE, ARCHIVED
+  isActive  Boolean   @default(true)
+  
+  // Fechas importantes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reviewDate  DateTime? // Fecha de próxima revisión
+  approvedAt  DateTime? // Fecha de aprobación
+  approvedBy  String?   // Quien aprobó
+  
+  // Relaciones
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reportId  String
+  report    Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  // Integraciones
+  audioFiles     AudioFile[]
+  resourceLinks  ResourceLink[]
+  workflows      WorkflowExecution[]
+  
+  @@map("peis")
+}
+
+// Archivos de audio generados (ElevenLabs)
+model AudioFile {
+  id       String @id @default(cuid())
+  filename String
+  path     String
+  duration Int?    // Duración en segundos
+  voiceId  String? // ID de voz de ElevenLabs
+  language String @default("es")
+  
+  // Tipo de audio
+  type String @default("SUMMARY") // SUMMARY, OBJECTIVES, FULL, CUSTOM
+  
+  // Metadatos
+  createdAt DateTime @default(now())
+  size      Int?
+  
+  // Relaciones
+  peiId String
+  pei   PEI    @relation(fields: [peiId], references: [id], onDelete: Cascade)
+  
+  @@map("audio_files")
+}
+
+// Enlaces a recursos educativos (Linkup)
+model ResourceLink {
+  id          String @id @default(cuid())
+  title       String
+  description String?
+  url         String
+  category    String // "app", "strategy", "tool", "article"
+  source      String @default("linkup")
+  relevance   Float  @default(0.8) // Score de relevancia 0-1
+  
+  // Metadatos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relaciones
+  peiId String
+  pei   PEI    @relation(fields: [peiId], references: [id], onDelete: Cascade)
+  
+  @@map("resource_links")
+}
+
+// Ejecuciones de workflows (n8n)
+model WorkflowExecution {
+  id           String @id @default(cuid())
+  workflowName String
+  executionId  String? // ID en n8n
+  status       String @default("PENDING") // PENDING, RUNNING, SUCCESS, FAILED, CANCELLED
+  
+  // Datos del workflow (como JSON strings)
+  input  String?
+  output String?
+  error  String?
+  
+  // Metadatos
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+  
+  // Relaciones
+  peiId String
+  pei   PEI    @relation(fields: [peiId], references: [id], onDelete: Cascade)
+  
+  @@map("workflow_executions")
+}
+
+// Log de actividades del sistema
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String   // "upload", "generate_pei", "create_audio", etc.
+  entity    String   // "student", "pei", "report"
+  entityId  String
+  details   String?  // JSON string
+  userAgent String?
+  ip        String?
+  
+  createdAt DateTime @default(now())
+  
+    @@map("activity_logs")
+}
+}
+
+// ==============================================
+// CONSTANTS for Status Values (Replace Enums)
+// ==============================================
+
+// ProcessingStatus: PENDING, PROCESSING, COMPLETED, FAILED
+// PEIStatus: DRAFT, REVIEW, APPROVED, ACTIVE, ARCHIVED  
+// AudioType: SUMMARY, OBJECTIVES, FULL, CUSTOM
+// WorkflowStatus: PENDING, RUNNING, SUCCESS, FAILED, CANCELLED
