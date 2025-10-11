@@ -6,6 +6,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { ElevenLabsModule } from './modules/elevenlabs/elevenlabs.module';
 import { LinkupModule } from './modules/linkup/linkup.module';
 import { N8nModule } from './modules/n8n/n8n.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { N8nModule } from './modules/n8n/n8n.module';
     LinkupModule,
     N8nModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
