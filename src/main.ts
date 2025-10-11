@@ -11,12 +11,13 @@ async function bootstrap() {
     origin: [
       'http://localhost:5173', // Vite React
       'http://localhost:3000', // React Dev Server
+      'http://localhost:8080', // Herramientas de prueba y otros frontends
       'http://127.0.0.1:5173',
       'http://127.0.0.1:3000'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   });
 
   // Pipe global de validación
@@ -70,10 +71,11 @@ API para la generación automática de Planes Educativos Individualizados (PEIs)
   });
 
   // Configurar puerto desde variables de entorno
-  const port = process.env.PORT || 3001;
-  
-  await app.listen(port);
-  
+  const port = Number(process.env.PORT) || 3001;
+
+  // Escuchar explícitamente en 0.0.0.0 para evitar problemas de binding en Windows
+  await app.listen(port, '0.0.0.0');
+
   console.log(`
 🚀 NeuroPlan Backend iniciado correctamente!
 
@@ -81,6 +83,8 @@ API para la generación automática de Planes Educativos Individualizados (PEIs)
 📚 API Docs: http://localhost:${port}/api/docs
 🧠 Modo: ${process.env.NODE_ENV || 'development'}
 🎯 Hackathon Mode: ${process.env.HACKATHON_MODE === 'true' ? '✅ ACTIVADO' : '❌ Desactivado'}
+
+ 🔉 Binding: 0.0.0.0:${port}
 
 🏆 Integraciones configuradas:
 ${process.env.ELEVENLABS_API_KEY?.startsWith('tu_') ? '🔊 ElevenLabs: ⚠️  Pendiente configurar API key' : '🔊 ElevenLabs: ✅ Configurado'}

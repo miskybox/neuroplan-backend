@@ -184,8 +184,7 @@ model ActivityLog {
   
   createdAt DateTime @default(now())
   
-    @@map("activity_logs")
-}
+  @@map("activity_logs")
 }
 
 // ==============================================
