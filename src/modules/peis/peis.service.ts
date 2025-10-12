@@ -13,6 +13,110 @@ export class PeisService {
   ) {}
 
   /**
+   * Genera un PEI completo desde diagnóstico directo (para frontend)
+   */
+  async generatePeiFromDiagnosis(diagnosisData: {
+    studentId: string;
+    diagnosis: string[];
+    symptoms?: string[];
+    strengths?: string[];
+    additionalNotes?: string;
+  }) {
+    // 1. Validar que el estudiante existe
+    const student = await this.prisma.student.findUnique({
+      where: { id: diagnosisData.studentId },
+    });
+
+    if (!student) {
+      throw new BadRequestException('Estudiante no encontrado');
+    }
+
+    // 2. Calcular edad del estudiante
+    const today = new Date();
+    const birthDate = new Date(student.birthDate);
+    const age = today.getFullYear() - birthDate.getFullYear();
+
+    // 3. Preparar análisis desde el diagnóstico directo
+    const analysis = {
+      diagnosis: diagnosisData.diagnosis,
+      symptoms: diagnosisData.symptoms || [],
+      strengths: diagnosisData.strengths || [],
+      additionalInfo: diagnosisData.additionalNotes || '',
+      studentName: `${student.name} ${student.lastName}`,
+      gradeLevel: student.grade,
+      age,
+    };
+
+    // 4. Generar PEI estructurado usando el método existente
+    const peiData = await this.generatePeiStructure(analysis, student);
+
+    // 5. Crear un report virtual para cumplir con el esquema
+    const virtualReport = await this.prisma.report.create({
+      data: {
+        filename: `diagnosis-${Date.now()}.json`,
+        originalName: `Diagnóstico directo - ${student.name} ${student.lastName}`,
+        mimeType: 'application/json',
+        size: JSON.stringify(diagnosisData).length,
+        path: `/virtual/diagnosis-${Date.now()}.json`,
+        extractedText: JSON.stringify(analysis),
+        status: 'COMPLETED',
+        processedAt: new Date(),
+        studentId: diagnosisData.studentId,
+      },
+    });
+
+    // 6. Crear PEI en base de datos
+    const pei = await this.prisma.pEI.create({
+      data: {
+        summary: peiData.summary,
+        diagnosis: peiData.diagnosis,
+        objectives: JSON.stringify(peiData.objectives),
+        adaptations: JSON.stringify(peiData.adaptations),
+        strategies: JSON.stringify(peiData.strategies),
+        evaluation: JSON.stringify(peiData.evaluation),
+        timeline: JSON.stringify(peiData.timeline),
+        status: 'DRAFT',
+        student: {
+          connect: { id: diagnosisData.studentId },
+        },
+        report: {
+          connect: { id: virtualReport.id },
+        },
+      },
+    });
+
+    // 6. Log de actividad
+    await this.prisma.activityLog.create({
+      data: {
+        action: 'generate_pei_from_diagnosis',
+        entity: 'pei',
+        entityId: pei.id,
+        details: JSON.stringify({
+          diagnosis: diagnosisData.diagnosis,
+          studentId: diagnosisData.studentId,
+          method: 'direct_diagnosis',
+        }),
+      },
+    });
+
+    // 7. Retornar PEI con datos expandidos
+    return {
+      ...pei,
+      objectives: JSON.parse(pei.objectives),
+      adaptations: JSON.parse(pei.adaptations),
+      strategies: JSON.parse(pei.strategies),
+      evaluation: JSON.parse(pei.evaluation),
+      timeline: JSON.parse(pei.timeline),
+      student: {
+        id: student.id,
+        name: student.name,
+        lastName: student.lastName,
+        grade: student.grade,
+      },
+    };
+  }
+
+  /**
    * Genera un PEI completo a partir de un informe subido
    */
   async generatePeiFromReport(dto: GeneratePeiFromReportDto) {

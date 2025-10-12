@@ -19,6 +19,61 @@ import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
 export class PeisController {
   constructor(private readonly peisService: PeisService) {}
 
+  @Post('generate-from-diagnosis')
+  @ApiOperation({
+    summary: '🧠 Generar PEI desde diagnóstico directo',
+    description: `
+**Endpoint para el frontend** - Genera un PEI completo desde un diagnóstico directo sin necesidad de subir informe.
+
+**Flujo simplificado:**
+1. 🧠 Recibe datos del diagnóstico directamente
+2. 📋 Genera objetivos SMART personalizados con Claude AI
+3. 🎯 Crea adaptaciones curriculares específicas
+4. 📊 Define plan de evaluación y seguimiento
+
+**Resultado:** PEI completo en segundos.
+
+**Uso desde frontend:** Este es el endpoint que necesitas para la demo.
+    `,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'PEI generado correctamente desde diagnóstico',
+    schema: {
+      example: {
+        id: 'clxxxxx',
+        version: 1,
+        summary: 'Plan Educativo Individualizado para Ana Pérez...',
+        diagnosis: 'Dislexia moderada',
+        objectives: [
+          'Mejorar velocidad lectora de 60 a 90 palabras/min en 6 meses',
+          'Incrementar comprensión lectora del percentil 25 al 40',
+        ],
+        adaptations: {
+          lengua: 'Tiempo adicional 50%, tipografía OpenDyslexic',
+          matematicas: 'Calculadora permitida, problemas con visuales',
+        },
+        strategies: [
+          'Método Orton-Gillingham multisensorial',
+          'Text-to-speech para textos largos',
+        ],
+        status: 'DRAFT',
+        createdAt: '2025-10-12T10:30:00.000Z',
+        studentId: 'clxxxxx',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  async generatePeiFromDiagnosis(@Body() diagnosisData: {
+    studentId: string;
+    diagnosis: string[];
+    symptoms?: string[];
+    strengths?: string[];
+    additionalNotes?: string;
+  }) {
+    return this.peisService.generatePeiFromDiagnosis(diagnosisData);
+  }
+
   @Post('generate')
   @ApiOperation({
     summary: '🤖 Generar PEI automáticamente',

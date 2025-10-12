@@ -1,5 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @ApiTags('health')
 @Controller()
@@ -99,5 +102,24 @@ export class AppController {
         targetPrizes: ['$2000', '€500', '€500 + €600/año', 'Membership'],
       },
     };
+  }
+
+  @Get('upload')
+  @ApiOperation({ 
+    summary: 'Página de Upload',
+    description: 'Sirve la página HTML para subir informes y generar PEIs'
+  })
+  serveUploadPage(@Res() res: Response) {
+    // Usar process.cwd() para obtener la raíz del proyecto
+    const htmlPath = path.join(process.cwd(), 'upload.html');
+    
+    if (fs.existsSync(htmlPath)) {
+      return res.sendFile(htmlPath);
+    } else {
+      return res.status(404).json({ 
+        error: 'Página no encontrada',
+        message: `El archivo upload.html no existe en: ${htmlPath}`
+      });
+    }
   }
 }
