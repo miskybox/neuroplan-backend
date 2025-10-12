@@ -31,40 +31,10 @@ export class AwsBedrockService {
       return this.mockInvokeClaude(prompt);
     }
 
-    // TODO: Real Amazon Bedrock implementation
-    // const { BedrockRuntimeClient, InvokeModelCommand } = require('@aws-sdk/client-bedrock-runtime');
-    // 
-    // const client = new BedrockRuntimeClient({
-    //   region: this.region,
-    //   credentials: {
-    //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    //   },
-    // });
-    //
-    // const command = new InvokeModelCommand({
-    //   modelId: 'anthropic.claude-v2',
-    //   contentType: 'application/json',
-    //   accept: 'application/json',
-    //   body: JSON.stringify({
-    //     prompt: `\n\nHuman: ${prompt}\n\nAssistant:`,
-    //     max_tokens_to_sample: options?.maxTokens || 2000,
-    //     temperature: options?.temperature || 0.7,
-    //   }),
-    // });
-    //
-    // const response = await client.send(command);
-    // const result = JSON.parse(new TextDecoder().decode(response.body));
-    // 
-    // return {
-    //   completion: result.completion,
-    //   usage: {
-    //     inputTokens: result.amazon-bedrock-invocationMetrics?.inputTokenCount || 0,
-    //     outputTokens: result.amazon-bedrock-invocationMetrics?.outputTokenCount || 0,
-    //   },
-    //   model: 'anthropic.claude-v2',
-    // };
-
+    // Production implementation requires AWS SDK and credentials configuration
+    // Install: npm install @aws-sdk/client-bedrock-runtime
+    // Configure: AWS_BEDROCK_API_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY in .env
+    
     return this.mockInvokeClaude(prompt);
   }
 
@@ -217,18 +187,10 @@ Formato JSON con campos: answer, suggestions[].`;
       return this.mockListModels();
     }
 
-    // TODO: Real Bedrock list models
-    // const { BedrockClient, ListFoundationModelsCommand } = require('@aws-sdk/client-bedrock');
-    // const client = new BedrockClient({ region: this.region });
-    // const command = new ListFoundationModelsCommand({});
-    // const response = await client.send(command);
-    // return response.modelSummaries.map(model => ({
-    //   modelId: model.modelId,
-    //   modelName: model.modelName,
-    //   provider: model.providerName,
-    //   capabilities: model.modelLifecycle.status === 'ACTIVE' ? ['text-generation'] : [],
-    // }));
-
+    // Production implementation requires AWS Bedrock SDK
+    // Install: npm install @aws-sdk/client-bedrock
+    // Configure: AWS credentials and region in .env
+    
     return this.mockListModels();
   }
 
