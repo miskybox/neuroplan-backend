@@ -33,7 +33,7 @@ export class PeisService {
 
     // 2. Calcular edad del estudiante
     const today = new Date();
-    const birthDate = new Date(student.birthDate);
+    const birthDate = new Date(student.fechaNacimiento);
     const age = today.getFullYear() - birthDate.getFullYear();
 
     // 3. Preparar análisis desde el diagnóstico directo
@@ -42,8 +42,8 @@ export class PeisService {
       symptoms: diagnosisData.symptoms || [],
       strengths: diagnosisData.strengths || [],
       additionalInfo: diagnosisData.additionalNotes || '',
-      studentName: `${student.name} ${student.lastName}`,
-      gradeLevel: student.grade,
+      studentName: `${student.nombre} ${student.apellidos}`,
+      gradeLevel: student.curso,
       age,
     };
 
@@ -54,7 +54,7 @@ export class PeisService {
     const virtualReport = await this.prisma.report.create({
       data: {
         filename: `diagnosis-${Date.now()}.json`,
-        originalName: `Diagnóstico directo - ${student.name} ${student.lastName}`,
+        originalName: `Diagnóstico directo - ${student.nombre} ${student.apellidos}`,
         mimeType: 'application/json',
         size: JSON.stringify(diagnosisData).length,
         path: `/virtual/diagnosis-${Date.now()}.json`,
@@ -68,14 +68,17 @@ export class PeisService {
     // 6. Crear PEI en base de datos
     const pei = await this.prisma.pEI.create({
       data: {
-        summary: peiData.summary,
-        diagnosis: peiData.diagnosis,
-        objectives: JSON.stringify(peiData.objectives),
-        adaptations: JSON.stringify(peiData.adaptations),
-        strategies: JSON.stringify(peiData.strategies),
-        evaluation: JSON.stringify(peiData.evaluation),
-        timeline: JSON.stringify(peiData.timeline),
-        status: 'DRAFT',
+        resumen: peiData.summary,
+        diagnostico: peiData.diagnosis,
+        objetivos: JSON.stringify(peiData.objectives),
+        adaptaciones: JSON.stringify(peiData.adaptations),
+        estrategias: JSON.stringify(peiData.strategies),
+        evaluacion: JSON.stringify(peiData.evaluation),
+        cronograma: JSON.stringify(peiData.timeline),
+        estado: 'BORRADOR',
+        creadoPor: {
+          connect: { id: 'system' }, // TODO: Usar usuario autenticado
+        },
         student: {
           connect: { id: diagnosisData.studentId },
         },
@@ -88,10 +91,10 @@ export class PeisService {
     // 6. Log de actividad
     await this.prisma.activityLog.create({
       data: {
-        action: 'generate_pei_from_diagnosis',
-        entity: 'pei',
-        entityId: pei.id,
-        details: JSON.stringify({
+        accion: 'generate_pei_from_diagnosis',
+        entidad: 'pei',
+        entidadId: pei.id,
+        detalles: JSON.stringify({
           diagnosis: diagnosisData.diagnosis,
           studentId: diagnosisData.studentId,
           method: 'direct_diagnosis',
@@ -102,16 +105,16 @@ export class PeisService {
     // 7. Retornar PEI con datos expandidos
     return {
       ...pei,
-      objectives: JSON.parse(pei.objectives),
-      adaptations: JSON.parse(pei.adaptations),
-      strategies: JSON.parse(pei.strategies),
-      evaluation: JSON.parse(pei.evaluation),
-      timeline: JSON.parse(pei.timeline),
+      objectives: JSON.parse(pei.objetivos),
+      adaptations: JSON.parse(pei.adaptaciones),
+      strategies: JSON.parse(pei.estrategias),
+      evaluation: JSON.parse(pei.evaluacion),
+      timeline: JSON.parse(pei.cronograma),
       student: {
         id: student.id,
-        name: student.name,
-        lastName: student.lastName,
-        grade: student.grade,
+        name: student.nombre,
+        lastName: student.apellidos,
+        grade: student.curso,
       },
     };
   }
@@ -159,16 +162,23 @@ export class PeisService {
     // 5. Crear PEI en base de datos
     const pei = await this.prisma.pEI.create({
       data: {
-        summary: peiData.summary,
-        diagnosis: peiData.diagnosis,
-        objectives: JSON.stringify(peiData.objectives),
-        adaptations: JSON.stringify(peiData.adaptations),
-        strategies: JSON.stringify(peiData.strategies),
-        evaluation: JSON.stringify(peiData.evaluation),
-        timeline: JSON.stringify(peiData.timeline),
-        status: 'DRAFT',
-        studentId: dto.studentId,
-        reportId: dto.reportId,
+        resumen: peiData.summary,
+        diagnostico: peiData.diagnosis,
+        objetivos: JSON.stringify(peiData.objectives),
+        adaptaciones: JSON.stringify(peiData.adaptations),
+        estrategias: JSON.stringify(peiData.strategies),
+        evaluacion: JSON.stringify(peiData.evaluation),
+        cronograma: JSON.stringify(peiData.timeline),
+        estado: 'BORRADOR',
+        creadoPor: {
+          connect: { email: 'system@neuroplan.ai' }, // Usuario system
+        },
+        student: {
+          connect: { id: dto.studentId },
+        },
+        report: {
+          connect: { id: dto.reportId },
+        },
       },
     });
 
@@ -184,10 +194,10 @@ export class PeisService {
     // 7. Log de actividad
     await this.prisma.activityLog.create({
       data: {
-        action: 'generate_pei',
-        entity: 'pei',
-        entityId: pei.id,
-        details: JSON.stringify({
+        accion: 'generate_pei',
+        entidad: 'pei',
+        entidadId: pei.id,
+        detalles: JSON.stringify({
           studentId: dto.studentId,
           reportId: dto.reportId,
           objectivesCount: peiData.objectives.length,
@@ -477,9 +487,7 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
       include: {
         student: true,
         report: true,
-        audioFiles: true,
-        resourceLinks: true,
-        workflows: true,
+        materialesAdaptados: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -494,9 +502,7 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
       include: {
         student: true,
         report: true,
-        audioFiles: true,
-        resourceLinks: true,
-        workflows: true,
+        materialesAdaptados: true,
       },
     });
 
@@ -507,11 +513,11 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
     // Parsear campos JSON
     return {
       ...pei,
-      objectives: JSON.parse(pei.objectives),
-      adaptations: JSON.parse(pei.adaptations),
-      strategies: JSON.parse(pei.strategies),
-      evaluation: JSON.parse(pei.evaluation),
-      timeline: JSON.parse(pei.timeline),
+      objectives: JSON.parse(pei.objetivos),
+      adaptations: JSON.parse(pei.adaptaciones),
+      strategies: JSON.parse(pei.estrategias),
+      evaluation: JSON.parse(pei.evaluacion),
+      timeline: JSON.parse(pei.cronograma),
     };
   }
 
@@ -519,7 +525,7 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
    * Actualiza el estado de un PEI
    */
   async updatePeiStatus(id: string, status: string) {
-    const validStatuses = ['DRAFT', 'REVIEW', 'APPROVED', 'ACTIVE', 'ARCHIVED'];
+    const validStatuses = ['BORRADOR', 'REVISION', 'APROBADO', 'ACTIVO', 'ARCHIVADO'];
     
     if (!validStatuses.includes(status)) {
       throw new BadRequestException('Estado no válido');
@@ -528,8 +534,8 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
     return this.prisma.pEI.update({
       where: { id },
       data: { 
-        status,
-        ...(status === 'APPROVED' && { approvedAt: new Date() }),
+        estado: status,
+        ...(status === 'APROBADO' && { fechaAprobacion: new Date() }),
       },
     });
   }
@@ -541,6 +547,7 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
     const pei = await this.getPeiById(id);
     
     // En producción: generar PDF real con librería como puppeteer o jsPDF
+    // Este es un mock básico para demostración
     const mockPdf = `
 %PDF-1.4
 1 0 obj
@@ -575,7 +582,7 @@ stream
 BT
 /F1 12 Tf
 100 700 Td
-(Plan Educativo Individualizado - ${pei.student.name} ${pei.student.lastName}) Tj
+(Plan Educativo Individualizado - ${pei.student?.nombre || 'N/A'} ${pei.student?.apellidos || ''}) Tj
 ET
 endstream
 endobj

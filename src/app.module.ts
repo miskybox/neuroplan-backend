@@ -3,10 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { PeisModule } from './modules/peis/peis.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
-import { ElevenLabsModule } from './modules/elevenlabs/elevenlabs.module';
-import { LinkupModule } from './modules/linkup/linkup.module';
-import { N8nModule } from './modules/n8n/n8n.module';
 import { AwsModule } from './modules/aws/aws.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -19,15 +17,15 @@ import { AppController } from './app.controller';
     
     // Módulos core
     PrismaModule,
+    
+    // Autenticación y seguridad
+    AuthModule,
 
     // Módulos funcionales
     PeisModule,
     UploadsModule,
     
-    // Integraciones con sponsors (hackathon)
-    ElevenLabsModule,
-    LinkupModule,
-    N8nModule,
+    // Módulo de almacenamiento (AWS S3)
     AwsModule,
   ],
   controllers: [AppController],

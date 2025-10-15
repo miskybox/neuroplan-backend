@@ -3,7 +3,7 @@ import { Vonage } from '@vonage/server-sdk';
 
 @Injectable()
 export class VonageService {
-  private vonage: Vonage;
+  private readonly vonage: Vonage;
 
   constructor() {
     // Inicializar Vonage SDK
@@ -33,7 +33,7 @@ export class VonageService {
       console.error('Error enviando SMS:', error);
       return {
         success: false,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }

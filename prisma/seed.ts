@@ -1,57 +1,129 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
 const prisma = new PrismaClient();
 
 async function main() {
-  // Crear estudiante demo
-  const student = await prisma.student.create({
-    data: {
-      name: 'Ana',
-      lastName: 'Pérez',
-      birthDate: new Date('2015-05-20'),
-      grade: '5º Primaria',
-      parentName: 'Juan Pérez',
-      parentEmail: 'juan.perez@example.com',
-      parentPhone: '+34 600 123 456',
-      school: 'CEIP Hackathon',
-    }
-  });
+  console.log('🌱 Iniciando seed de datos...');
 
-  // Crear informe demo
-  const report = await prisma.report.create({
-    data: {
-      filename: 'informe-ana.pdf',
-      originalName: 'Informe Ana.pdf',
-      mimeType: 'application/pdf',
-      size: 123456,
-      path: '/uploads/informe-ana.pdf',
-      extractedText: 'Diagnóstico: Dislexia. Síntomas: dificultad lectora.',
-      status: 'COMPLETED',
-      studentId: student.id,
-    }
+  // 1. Crear centro educativo de prueba
+  const centro = await prisma.centro.upsert({
+    where: { codigo: 'DEMO-001' },
+    update: {},
+    create: {
+      nombre: 'Centro Educativo Demo',
+      codigo: 'DEMO-001',
+      ciudad: 'Barcelona',
+      provincia: 'Barcelona',
+      tipo: 'ESO',
+      maxUsuarios: 100,
+      activo: true,
+    },
   });
+  console.log('✅ Centro creado:', centro.nombre);
 
-  // Crear PEI demo
-  await prisma.pEI.create({
-    data: {
-      version: 1,
-      summary: 'PEI para Ana Pérez',
-      diagnosis: 'Dislexia',
-      objectives: '["Mejorar velocidad lectora", "Reducir errores ortográficos"]',
-      adaptations: '{"lengua": "Tiempo extra", "matematicas": "Apoyos visuales"}',
-      strategies: '["Método multisensorial", "Refuerzo positivo"]',
-      evaluation: '{"preferente": "Oral"}',
-      timeline: '{"revisión": "trimestral"}',
-      status: 'ACTIVE',
-      isActive: true,
-      studentId: student.id,
-      reportId: report.id,
-    }
+  // 2. Crear usuario system
+  const systemPassword = await bcrypt.hash('SystemPass123!', 10);
+  const systemUser = await prisma.usuario.upsert({
+    where: { email: 'system@neuroplan.ai' },
+    update: {},
+    create: {
+      email: 'system@neuroplan.ai',
+      password: systemPassword,
+      nombre: 'System',
+      apellidos: 'Administrator',
+      rol: 'ADMIN',
+      centroId: centro.id,
+      activo: true,
+    },
   });
+  console.log('✅ Usuario system creado');
+
+  // 3. Crear usuario ADMIN
+  const adminPassword = await bcrypt.hash('Admin123!', 10);
+  const admin = await prisma.usuario.upsert({
+    where: { email: 'admin@demo.com' },
+    update: {},
+    create: {
+      email: 'admin@demo.com',
+      password: adminPassword,
+      nombre: 'Admin',
+      apellidos: 'Demo',
+      rol: 'ADMIN',
+      centroId: centro.id,
+      activo: true,
+    },
+  });
+  console.log('✅ Admin creado:', admin.email);
+
+  // 4. Crear usuario ORIENTADOR
+  const orientadorPassword = await bcrypt.hash('Orientador123!', 10);
+  const orientador = await prisma.usuario.upsert({
+    where: { email: 'orientador@demo.com' },
+    update: {},
+    create: {
+      email: 'orientador@demo.com',
+      password: orientadorPassword,
+      nombre: 'María',
+      apellidos: 'González',
+      rol: 'ORIENTADOR',
+      centroId: centro.id,
+      activo: true,
+    },
+  });
+  console.log('✅ Orientador creado:', orientador.email);
+
+  // 5. Crear usuario PROFESOR
+  const profesorPassword = await bcrypt.hash('Profesor123!', 10);
+  const profesor = await prisma.usuario.upsert({
+    where: { email: 'profesor@demo.com' },
+    update: {},
+    create: {
+      email: 'profesor@demo.com',
+      password: profesorPassword,
+      nombre: 'Juan',
+      apellidos: 'Martínez',
+      rol: 'PROFESOR',
+      centroId: centro.id,
+      asignaturas: JSON.stringify(['Matemáticas', 'Física']),
+      activo: true,
+    },
+  });
+  console.log('✅ Profesor creado:', profesor.email);
+
+  // 6. Crear estudiante de prueba
+  const estudiante = await prisma.student.upsert({
+    where: { id: 'demo-student-001' },
+    update: {},
+    create: {
+      id: 'demo-student-001',
+      nombre: 'Carlos',
+      apellidos: 'Rodríguez Pérez',
+      fechaNacimiento: new Date('2012-05-15'),
+      curso: '1º ESO',
+      diagnosticos: JSON.stringify(['TDAH', 'Dislexia']),
+      estiloAprendizaje: 'VISUAL',
+      nombreTutor: 'Ana Pérez',
+      emailTutor: 'ana.perez@email.com',
+      telefonoTutor: '+34 666 123 456',
+      centroId: centro.id,
+      consentimientoRGPD: true,
+      consentimientoIA: true,
+    },
+  });
+  console.log('✅ Estudiante creado:', estudiante.nombre, estudiante.apellidos);
+
+  console.log('\n🎉 Seed completado exitosamente!\n');
+  console.log('📝 Credenciales de acceso:');
+  console.log('   Admin: admin@demo.com / Admin123!');
+  console.log('   Orientador: orientador@demo.com / Orientador123!');
+  console.log('   Profesor: profesor@demo.com / Profesor123!');
+  console.log('   System: system@neuroplan.ai / SystemPass123!');
 }
 
 main()
-  .catch(e => {
-    console.error(e);
+  .catch((e) => {
+    console.error('❌ Error en seed:', e);
     process.exit(1);
   })
   .finally(async () => {

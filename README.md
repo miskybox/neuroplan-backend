@@ -1,210 +1,371 @@
-# 🧠 NeuroPlan Backend
+# NeuroPlan - Sistema de Gestión de Planes Educativos Individualizados (PEI)
 
-<div align="center">
+## 🎯 Descripción
 
-![Status](https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge)
-![Barcelona Hackathon 2025](https://img.shields.io/badge/Barcelona_Hackathon-2025-orange?style=for-the-badge)
-![Endpoints](https://img.shields.io/badge/Endpoints-54-blue?style=for-the-badge)
+**NeuroPlan** es una plataforma SaaS que automatiza la creación y gestión de **Planes Educativos Individualizados (PEI)** para estudiantes con necesidades educativas especiales (NEE), utilizando **IA generativa** para reducir hasta un 85% el tiempo de trabajo administrativo.
 
-**Plataforma de Generación Automática de PEIs con IA**
+### 🏆 Impacto y ROI
 
-*De semanas a minutos: Educación inclusiva para 500,000+ estudiantes*
-
-[🚀 Demo](http://localhost:3001) · [📚 API Docs](http://localhost:3001/api/docs) · [💚 Health](http://localhost:3001/health)
-
-</div>
+- **Ahorro de tiempo:** De 2-3 horas/PEI → 15-20 minutos
+- **ROI para Barcelona:** €800.000 anuales (8.000 estudiantes NEE)
+- **Target:** Ayuntamientos, consorcios educativos, colegios privados
 
 ---
 
-## 🏆 Hackathon Barcelona 2025 - Estrategia Multi-Premio
+## 🚀 Stack Tecnológico
 
-### 🔊 ElevenLabs Prize ($2,000 USD)
-**Most creative or impactful use of ElevenLabs API**
-- ✅ 5 endpoints implementados
-- ✅ Audio natural en español para 500K+ familias
-- ✅ Accesibilidad total para PEIs
+### Backend
+- **Framework:** NestJS + TypeScript
+- **Base de datos:** PostgreSQL 17
+- **ORM:** Prisma 5.22.0
+- **Autenticación:** JWT
 
-### � Linkup Prize (€500)
-**Best use of Linkup for verified educational resources**
-- ✅ 4 endpoints implementados
-- ✅ Recursos verificados por diagnóstico
-- ✅ Fuentes oficiales (Ministerio Educación, universidades)
+### Integraciones IA
+- **AWS Bedrock:** Claude 3.5 Sonnet (generación de PEIs)
+- **ElevenLabs:** Text-to-Speech multilingual
+- **Linkup:** Deep search para recursos educativos
+- **n8n:** Automatización de workflows
+- **Vonage:** Comunicación SMS/WhatsApp/Video
 
-### ⚙️ n8n Prize (€500 + €600/year hosting)
-**Most innovative workflow automation**
-- ✅ 8 endpoints implementados
-- ✅ Workflow completo end-to-end
-- ✅ Notificaciones automáticas multicanal
+---
 
-### 🌍 Norrsken Impact Prize
-**Social impact in education/inclusion**
-- ✅ 500,000+ estudiantes beneficiados
-- ✅ 95% reducción de tiempo
-- ✅ ODS 4 + ODS 10
+## 📦 Instalación
 
-## 🎯 Funcionalidades Core
+### Requisitos previos
+- Node.js 18+ 
+- PostgreSQL 17 (instalado y corriendo)
+- npm o yarn
 
-### 📄 Procesamiento Inteligente
-- Upload de informes médicos/psicopedagógicos (PDF/imagen)
-- Extracción automática con OCR
-- Análisis con Claude AI para identificar NEE
-
-### 🤖 Generación de PEIs
-- PEIs personalizados en tiempo real
-- Objetivos SMART específicos
-- Adaptaciones curriculares automáticas
-- Seguimiento y evaluación continua
-
-### 🔊 Accesibilidad Total (ElevenLabs)
-- Conversión texto-a-voz de PEIs
-- Resúmenes hablados para familias
-- Múltiples voces naturales en español
-
-### 📚 Recursos Verificados (Linkup)
-- Búsqueda en tiempo real de recursos educativos
-- Apps, estrategias y herramientas recomendadas
-- Información actualizada sin alucinaciones
-
-### ⚙️ Automatización (n8n)
-- Workflows automáticos: generación → notificación → seguimiento
-- Integración con sistemas educativos
-- Alertas y recordatorios automáticos
-
-## 🛠️ Stack Tecnológico
-
-- **Framework**: NestJS + TypeScript
-- **Base de datos**: Prisma + SQLite (dev) / PostgreSQL (prod)
-- **IA**: Claude AI (Anthropic)
-- **Procesamiento**: PDF-parse + OCR
-- **APIs**: ElevenLabs, Linkup, n8n webhooks
-- **Cloud**: AWS (Lambda/EC2)
-
-## 🚀 Quick Start
-
-### Instalación
+### 1. Clonar repositorio
 ```bash
-# Instalar dependencias
+git clone <tu-repositorio>
+cd neuroplan-backend
+```
+
+### 2. Instalar dependencias
+```bash
 npm install
+```
 
-# Configurar base de datos
-npm run prisma:generate
-npm run prisma:push
+### 3. Configurar variables de entorno
 
-# Iniciar en desarrollo
+Crea un archivo `.env` en la raíz:
+
+```env
+# Database
+DATABASE_URL="postgresql://postgres@localhost:5432/neuroplan?schema=public"
+
+# Server
+PORT=3001
+NODE_ENV=development
+
+# JWT
+JWT_SECRET=your-secret-key-change-in-production
+
+# AWS Bedrock (Claude)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-aws-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret
+
+# ElevenLabs
+ELEVENLABS_API_KEY=your-elevenlabs-key
+
+# Linkup
+LINKUP_API_KEY=your-linkup-key
+
+# n8n
+N8N_WEBHOOK_URL=https://your-n8n-instance.app.n8n.cloud/webhook/
+
+# Vonage (opcional - para producción)
+VONAGE_API_KEY=your-vonage-key
+VONAGE_API_SECRET=your-vonage-secret
+VONAGE_APPLICATION_ID=your-app-id
+VONAGE_PRIVATE_KEY_PATH=./private.key
+```
+
+### 4. Crear base de datos en PostgreSQL
+
+```sql
+-- Conectar a PostgreSQL
+psql -U postgres
+
+-- Crear base de datos
+CREATE DATABASE neuroplan;
+\q
+```
+
+### 5. Ejecutar migraciones
+
+```bash
+npx prisma migrate deploy
+npx prisma generate
+```
+
+### 6. (Opcional) Seed de datos de prueba
+
+```bash
+npx prisma db seed
+```
+
+---
+
+## 🏃 Ejecutar el proyecto
+
+### Modo desarrollo
+```bash
 npm run start:dev
 ```
 
-### Variables de Entorno
+### Modo producción
 ```bash
-# Copia .env.example a .env y configura:
-DATABASE_URL="file:./dev.db"
-CLAUDE_API_KEY="tu_claude_key"
-ELEVENLABS_API_KEY="tu_elevenlabs_key"
-LINKUP_API_KEY="tu_linkup_key"
-N8N_WEBHOOK_URL="https://tu-n8n.app/webhook/neuroplan"
+npm run build
+npm run start:prod
 ```
 
-## 📡 Endpoints Principales
+### Verificar que funciona
+Abre tu navegador en: http://localhost:3001/health
 
-### PEIs
-- `POST /api/peis/upload` - Subir informe y generar PEI
-- `GET /api/peis/:id` - Obtener PEI específico
-- `GET /api/peis/:id/pdf` - Descargar PEI en PDF
-
-### ElevenLabs (Audio)
-- `GET /api/elevenlabs/pei/:id/summary-audio` - Audio del resumen
-- `POST /api/elevenlabs/text-to-speech` - Convertir texto a audio
-
-### Linkup (Recursos)
-- `GET /api/linkup/pei/:id/resources` - Recursos para PEI específico
-- `GET /api/linkup/search/:query` - Búsqueda libre de recursos
-
-### n8n (Automatización)
-- `POST /api/n8n/trigger-workflow` - Disparar workflow
-- `POST /api/n8n/webhook/:action` - Webhooks entrantes
-
-## 🎨 Arquitectura
-
+Deberías ver:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "uptime": 123.45,
+  "integrations": {
+    "elevenlabs": "configured",
+    "linkup": "configured",
+    "n8n": "configured"
+  }
+}
 ```
-src/
-├── modules/
-│   ├── peis/          # Core PEI generation
-│   ├── elevenlabs/    # Text-to-speech
-│   ├── linkup/        # Educational resources
-│   ├── n8n/           # Workflow automation
-│   └── uploads/       # File processing
-├── common/
-│   ├── guards/        # Auth & validation
-│   ├── interceptors/  # Logging & transform
-│   └── decorators/    # Custom decorators
-├── config/            # Environment configuration
-└── prisma/           # Database schema
-```
-
-## 🎤 Demo Flow
-
-1. **Upload** informe (PDF/imagen) → `/api/peis/upload`
-2. **Procesamiento** automático con Claude AI
-3. **Generación** PEI personalizado en ~30 segundos
-4. **Audio** disponible vía ElevenLabs para accesibilidad
-5. **Recursos** educativos automáticos vía Linkup
-6. **Workflow** n8n dispara notificaciones y seguimiento
-
-## 🏆 Impacto Social
-
-- **800,000** estudiantes con NEE en España
-- **3 semanas → 3 minutos**: Reducción dramática de tiempo
-- **€300 → €10**: Coste 30x menor
-- **100% personalizado**: Cada PEI único por estudiante
-- **Accesibilidad total**: Audio, multiidioma, familias incluidas
-
-## 🔗 Integraciones Ganadoras
-
-### ElevenLabs Integration
-```typescript
-// Audio de resumen automático
-const audioBuffer = await this.elevenLabsService.textToSpeech(
-  pei.summary,
-  'es' // Español natural
-);
-```
-
-### Linkup Integration  
-```typescript
-// Recursos verificados en tiempo real
-const resources = await this.linkupService.searchEducationalResources(
-  pei.studentNeeds,
-  pei.grade
-);
-```
-
-### n8n Integration
-```typescript
-// Workflow automático
-await this.n8nService.triggerWorkflow('pei-generated', {
-  studentId,
-  peiId,
-  parentEmail
-});
-```
-
-## 📈 Métricas de Éxito
-
-- **Performance**: PEI generado en <60 segundos
-- **Precisión**: >95% extracción correcta de datos
-- **Accesibilidad**: Audio claro en <10 segundos
-- **Recursos**: >50 recursos por consulta
-- **Automatización**: 0 intervención manual
-
-## 🌟 Próximos Pasos
-
-- **AWS deployment** con escalabilidad automática  
-- **Integración Fire TV** (Vega OS) para aulas
-- **WhatsApp** notifications (Vonage)
-- **Modelo propio** entrenado en PEIs españoles
 
 ---
 
-**Desarrollado con ❤️ para la educación inclusiva**
+## 📡 Endpoints principales
 
-*Hackathon Barcelona 2025 - Team NeuroPlan*
+### Salud del sistema
+```
+GET /health
+```
+
+### Estudiantes
+```
+POST /api/students - Crear estudiante
+GET /api/students/:id - Obtener estudiante
+GET /api/students - Listar estudiantes
+```
+
+### Informes y PEIs
+```
+POST /api/uploads/reports/:studentId - Subir informe (PDF/JPG/PNG, max 10MB)
+POST /api/pei/generate/:studentId - Generar PEI con IA
+GET /api/pei/:studentId - Obtener PEI
+```
+
+### Audio (ElevenLabs)
+```
+POST /api/audio/generate - Generar audio de PEI
+GET /api/audio/:id - Obtener audio generado
+```
+
+### Recursos educativos (Linkup)
+```
+POST /api/resources/search - Buscar recursos con IA
+```
+
+### Comunicación (Vonage)
+```
+POST /api/vonage/send-sms - Enviar SMS
+POST /api/vonage/send-whatsapp - Enviar WhatsApp
+POST /api/vonage/create-video-session - Crear sesión de videollamada
+```
+
+---
+
+## 🗄️ Modelo de datos (Prisma)
+
+### Entidades principales
+- **Student:** Datos del estudiante
+- **Report:** Informes subidos (PDF/imágenes)
+- **PEI:** Planes educativos generados
+- **AudioFile:** Audios generados con ElevenLabs
+- **ResourceLink:** Enlaces a recursos educativos
+- **WorkflowExecution:** Logs de workflows n8n
+- **ActivityLog:** Auditoría de acciones
+
+Ver esquema completo en `prisma/schema.prisma`
+
+---
+
+## 🧪 Testing
+
+```bash
+# Tests unitarios
+npm run test
+
+# Tests e2e
+npm run test:e2e
+
+# Cobertura
+npm run test:cov
+```
+
+---
+
+## 🚢 Despliegue a producción
+
+### Opción 1: Railway.app (~$5-10/mes)
+1. Crear cuenta en railway.app
+2. Conectar repositorio GitHub
+3. Añadir PostgreSQL plugin
+4. Configurar variables de entorno
+5. Deploy automático
+
+### Opción 2: Render.com (~$7/mes + $15 DB)
+1. Crear cuenta en render.com
+2. New Web Service → GitHub repo
+3. Build: `npm install && npx prisma generate`
+4. Start: `npm run start:prod`
+5. Añadir PostgreSQL database ($15/mes)
+
+### Variables de entorno de producción
+Asegúrate de configurar:
+- `NODE_ENV=production`
+- `DATABASE_URL` con conexión PostgreSQL en la nube
+- Todas las API keys de los patrocinadores
+- `JWT_SECRET` seguro (32+ caracteres aleatorios)
+
+---
+
+## 📊 Arquitectura del sistema
+
+```
+┌─────────────────┐
+│   Frontend      │ (React/Next.js - repositorio separado)
+│   (puerto 3000) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│   Backend NestJS (puerto 3001)          │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │  Controllers (REST API)         │   │
+│  └──────────┬──────────────────────┘   │
+│             │                           │
+│  ┌──────────▼──────────────────────┐   │
+│  │  Services (Lógica de negocio)  │   │
+│  └──────────┬──────────────────────┘   │
+│             │                           │
+│  ┌──────────▼──────────────────────┐   │
+│  │  Prisma ORM                     │   │
+│  └──────────┬──────────────────────┘   │
+└─────────────┼───────────────────────────┘
+              │
+              ▼
+   ┌──────────────────────┐
+   │  PostgreSQL 17       │
+   │  (neuroplan DB)      │
+   └──────────────────────┘
+
+   Integraciones externas:
+   ├─ AWS Bedrock (Claude 3.5)
+   ├─ ElevenLabs (TTS)
+   ├─ Linkup (Search)
+   ├─ n8n (Workflows)
+   └─ Vonage (Comunicación)
+```
+
+---
+
+## 🎯 Roadmap MVP (4-8 semanas)
+
+### Fase 1: Core (2 semanas)
+- [x] Migración a PostgreSQL
+- [x] API endpoints básicos
+- [ ] Dashboard frontend
+- [ ] Autenticación JWT
+
+### Fase 2: IA (2 semanas)
+- [x] Generación PEI con Claude
+- [x] Text-to-Speech ElevenLabs
+- [x] Búsqueda de recursos Linkup
+- [ ] Mejora prompts basada en feedback
+
+### Fase 3: Producción (2 semanas)
+- [ ] Deploy a Railway/Render
+- [ ] Backups automáticos
+- [ ] Monitoreo y logs (Sentry/LogRocket)
+- [ ] Documentación API (Swagger)
+
+### Fase 4: Piloto (2 semanas)
+- [ ] 5 colegios piloto
+- [ ] Capacitación docentes
+- [ ] Recolección feedback
+- [ ] Iteración rápida
+
+---
+
+## 🏛️ Clientes objetivo
+
+### 1. Ayuntamiento de Barcelona
+- **Target:** 8.000 estudiantes NEE
+- **ROI:** €800.000/año
+- **Presupuesto:** €50K-80K implementación inicial
+
+### 2. Consorcio de Educación de Barcelona
+- **Target:** Gestiona TODOS los colegios públicos
+- **ROI:** Escala a nivel ciudad
+- **Modelo:** Licitación pública
+
+### 3. Colegios privados (SaaS)
+- **Pricing:** €99-599/mes según tamaño
+- **Target:** 50-500 estudiantes
+- **Modalidad:** Suscripción mensual
+
+### 4. Asociaciones NEE
+- **Modelo:** Partnerships estratégicos
+- **Beneficio:** Acceso a red de centros educativos
+
+---
+
+## 📄 Licencia
+
+Copyright © 2025 NeuroPlan. Todos los derechos reservados.
+
+---
+
+## 👨‍💻 Equipo
+
+Desarrollado con ❤️ por el equipo NeuroPlan
+
+---
+
+## 🔧 Troubleshooting
+
+### Error: "Can't reach database server"
+- Verifica que PostgreSQL esté corriendo: `pg_isready`
+- Comprueba el `DATABASE_URL` en `.env`
+- Prueba conexión: `psql -U postgres -d neuroplan`
+
+### Error: "Prisma Client not generated"
+```bash
+npx prisma generate
+```
+
+### Error: "Port 3001 already in use"
+```bash
+# Windows
+netstat -ano | findstr :3001
+taskkill /PID <PID> /F
+
+# Linux/Mac
+lsof -ti:3001 | xargs kill -9
+```
+
+### Limpiar y regenerar base de datos
+```bash
+npx prisma migrate reset --force
+npx prisma generate
+npm run start:dev
+```

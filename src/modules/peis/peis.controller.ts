@@ -8,13 +8,20 @@ import {
   Res,
   NotFoundException,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { PeisService } from './peis.service';
 import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('peis')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/peis')
 export class PeisController {
   constructor(private readonly peisService: PeisService) {}
@@ -75,6 +82,7 @@ export class PeisController {
   }
 
   @Post('generate')
+  @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
     summary: '🤖 Generar PEI automáticamente',
     description: `
@@ -114,6 +122,7 @@ export class PeisController {
   }
 
   @Get()
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO')
   @ApiOperation({
     summary: 'Listar todos los PEIs',
     description: 'Obtiene todos los PEIs con información del estudiante y recursos asociados',
@@ -160,6 +169,7 @@ export class PeisController {
   }
 
   @Get(':id')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO')
   @ApiOperation({
     summary: 'Obtener PEI específico',
     description: `
@@ -228,6 +238,7 @@ Obtiene un PEI completo con todos sus datos estructurados.
   }
 
   @Patch(':id/status')
+  @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
     summary: 'Actualizar estado del PEI',
     description: `
@@ -312,7 +323,7 @@ Genera y descarga el PEI en formato PDF oficial para:
       const pei = await this.peisService.getPeiById(id);
       const pdfBuffer = await this.peisService.generatePeiPdf(id);
 
-      const filename = `PEI_${pei.student.name}_${pei.student.lastName}_v${pei.version}.pdf`
+      const filename = `PEI_${pei.student?.nombre || 'estudiante'}_${pei.student?.apellidos || ''}_v${pei.version}.pdf`
         .replace(/\s+/g, '_')
         .replace(/[^a-zA-Z0-9._-]/g, '');
 

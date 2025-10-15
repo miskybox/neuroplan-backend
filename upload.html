@@ -539,6 +539,7 @@
           });
         } catch (workflowError) {
           console.warn('⚠️ Workflow n8n falló, pero PEI generado correctamente');
+          showError('El workflow de notificación falló, pero el PEI fue generado correctamente.');
         }
         completeStep(5);
 

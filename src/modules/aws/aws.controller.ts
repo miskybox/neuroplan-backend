@@ -6,9 +6,10 @@ import {
   Param,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import {
   AwsBedrockService,
   AwsTextractService,
@@ -16,8 +17,13 @@ import {
   AwsS3Service,
   AwsPollyService,
 } from './services';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('AWS Services')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('aws')
 export class AwsController {
   constructor(
@@ -59,6 +65,7 @@ export class AwsController {
   }
 
   @Post('bedrock/generate-pei')
+  @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
     summary: 'Generate PEI using Amazon Bedrock',
     description: 'Core NeuroPlan use case: PEI generation via Bedrock+Claude',
@@ -266,6 +273,7 @@ export class AwsController {
   // ========================================
 
   @Post('s3/upload')
+  @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
     summary: 'Upload file to AWS S3',
     description: 'Store reports, PDFs, and generated documents',
@@ -356,6 +364,7 @@ export class AwsController {
   // ========================================
 
   @Post('process-report')
+  @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
     summary: 'Complete AWS pipeline for report processing',
     description: 'OCR → NLP → Storage → Analysis',

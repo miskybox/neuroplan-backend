@@ -2,25 +2,28 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuración CORS para hackathon
+  // Seguridad: Helmet para headers HTTP seguros
+  app.use(helmet());
+
+  // CORS restrictivo para producción
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+
   app.enableCors({
-    origin: [
-      'http://localhost:5173', // Vite React
-      'http://localhost:3000', // React Dev Server
-      'http://localhost:8080', // Herramientas de prueba y otros frontends
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3000'
-    ],
+    origin: allowedOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Pipe global de validación
+  // Pipe global de validación estricta
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -34,64 +37,62 @@ async function bootstrap() {
 
   // Configuración Swagger para documentación API
   const config = new DocumentBuilder()
-    .setTitle('NeuroPlan API')
+    .setTitle('NeuroPlan AI Campus API')
     .setDescription(`
-🧠 **NeuroPlan Backend API**
+🧠 **NeuroPlan AI Campus - Plataforma Educativa Personalizada**
 
-API para la generación automática de Planes Educativos Individualizados (PEIs) con IA.
+API para la gestión de educación personalizada para estudiantes neurodivergentes.
 
-**Hackathon Barcelona 2025 - Multi-Premio Strategy**
+## 🎯 Funcionalidades:
+- 👥 Gestión de usuarios y roles (ADMIN, PROFESOR, ORIENTADOR, DIRECTOR_CENTRO)
+- 🏫 Multi-tenancy por centros educativos
+- 📄 Procesamiento de informes médicos/psicopedagógicos
+- 🤖 Generación automática de PEIs con IA
+- � Adaptación de temarios oficiales (LOMLOE)
+- 🎓 Pasaporte Educativo Inteligente
 
-## 🎯 Funcionalidades Core:
-- 📄 Upload y procesamiento de informes médicos/psicopedagógicos
-- 🤖 Generación automática de PEIs con Claude AI
-- 🔊 Conversión texto-a-voz con ElevenLabs
-- 📚 Búsqueda de recursos educativos con Linkup
-- ⚙️ Automatización de workflows con n8n
-
-## 🏆 Integraciones Ganadoras:
-- **ElevenLabs** ($2000): Text-to-speech accesible
-- **Linkup** (€500): Recursos educativos verificados  
-- **n8n** (€500 + €600/año): Automatización completa
-- **Norrsken**: Impacto social en educación inclusiva
+## 🔒 Seguridad:
+- Autenticación JWT
+- RBAC (Control de acceso basado en roles)
+- Multi-tenancy por centro educativo
+- Auditoría completa de acciones
+- Cumplimiento RGPD
     `)
-    .setVersion('1.0')
-    .addTag('peis', 'Gestión de Planes Educativos Individualizados')
-    .addTag('elevenlabs', 'Conversión texto-a-voz')
-    .addTag('linkup', 'Búsqueda de recursos educativos')
-    .addTag('n8n', 'Automatización de workflows')
+    .setVersion('2.0')
+    .addBearerAuth()
+    .addTag('auth', 'Autenticación y autorización')
+    .addTag('peis', 'Planes Educativos Individualizados')
+    .addTag('students', 'Gestión de estudiantes')
+    .addTag('temarios', 'Temarios oficiales')
     .addTag('uploads', 'Gestión de archivos')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'NeuroPlan API Docs',
+    customSiteTitle: 'NeuroPlan AI Campus API',
     customfavIcon: '🧠',
     customCss: '.swagger-ui .topbar { display: none }',
   });
 
-  // Configurar puerto desde variables de entorno
   const port = Number(process.env.PORT) || 3001;
-
-  // Escuchar explícitamente en 0.0.0.0 para evitar problemas de binding en Windows
   await app.listen(port, '0.0.0.0');
 
   console.log(`
-🚀 NeuroPlan Backend iniciado correctamente!
+🚀 NeuroPlan AI Campus - MVP iniciado
 
-🌐 Servidor: http://localhost:${port}
-📚 API Docs: http://localhost:${port}/api/docs
-🧠 Modo: ${process.env.NODE_ENV || 'development'}
-🎯 Hackathon Mode: ${process.env.HACKATHON_MODE === 'true' ? '✅ ACTIVADO' : '❌ Desactivado'}
+🌐 API: http://localhost:${port}
+📚 Docs: http://localhost:${port}/api/docs
+🔒 Modo: ${process.env.NODE_ENV || 'development'}
 
- 🔉 Binding: 0.0.0.0:${port}
+✅ Sistema profesional configurado:
+   - Autenticación JWT
+   - Control de acceso por roles
+   - Multi-tenancy
+   - Validación estricta
+   - Headers de seguridad
+   - Auditoría de acciones
 
-🏆 Integraciones configuradas:
-${process.env.ELEVENLABS_API_KEY?.startsWith('tu_') ? '🔊 ElevenLabs: ⚠️  Pendiente configurar API key' : '🔊 ElevenLabs: ✅ Configurado'}
-${process.env.LINKUP_API_KEY?.startsWith('tu_') ? '📚 Linkup: ⚠️  Pendiente configurar API key' : '📚 Linkup: ✅ Configurado'}
-${process.env.N8N_WEBHOOK_URL?.startsWith('https://tu-') ? '⚙️  n8n: ⚠️  Pendiente configurar webhook' : '⚙️  n8n: ✅ Configurado'}
-
-¡Listos para ganar el hackathon! 🎯
+🎯 Listo para presentar al Ayuntamiento
   `);
 }
 
