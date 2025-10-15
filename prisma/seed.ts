@@ -37,6 +37,7 @@ async function main() {
       activo: true,
     },
   });
+  console.log('✅ Usuario system creado:', systemUser.email);
   console.log('✅ Usuario system creado');
 
   // 3. Crear usuario ADMIN
@@ -91,7 +92,24 @@ async function main() {
   });
   console.log('✅ Profesor creado:', profesor.email);
 
-  // 6. Crear estudiante de prueba
+  // 6. Crear usuario familia de prueba
+  const familiaPassword = await bcrypt.hash('demo123', 10);
+  const familia = await prisma.usuario.upsert({
+    where: { email: 'familia@demo.com' },
+    update: {},
+    create: {
+      email: 'familia@demo.com',
+      password: familiaPassword,
+      nombre: 'María',
+      apellidos: 'López García',
+      rol: 'FAMILIA',
+      centroId: centro.id,
+      activo: true,
+    },
+  });
+  console.log('✅ Usuario familia creado:', familia.email);
+
+  // 7. Crear estudiante de prueba
   const estudiante = await prisma.student.upsert({
     where: { id: 'demo-student-001' },
     update: {},
@@ -103,9 +121,10 @@ async function main() {
       curso: '1º ESO',
       diagnosticos: JSON.stringify(['TDAH', 'Dislexia']),
       estiloAprendizaje: 'VISUAL',
-      nombreTutor: 'Ana Pérez',
-      emailTutor: 'ana.perez@email.com',
-      telefonoTutor: '+34 666 123 456',
+      nombreTutor: 'María López García',
+      emailTutor: 'familia@demo.com',
+      telefonoTutor: '+34666123456',
+      usuarioFamiliaId: familia.id, // Asociar con usuario familia
       centroId: centro.id,
       consentimientoRGPD: true,
       consentimientoIA: true,

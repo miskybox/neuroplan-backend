@@ -17,7 +17,6 @@ import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('peis')
 @ApiBearerAuth()
@@ -97,7 +96,7 @@ export class PeisController {
 
 **Resultado:** PEI listo en ~30-60 segundos vs 3 semanas manual.
 
-**Siguiente paso:** Usa los endpoints de ElevenLabs, Linkup y n8n para completar la experiencia.
+**Siguiente paso:** El PEI está listo para ser revisado y personalizado según las necesidades específicas del estudiante.
     `,
   })
   @ApiResponse({
@@ -122,7 +121,7 @@ export class PeisController {
   }
 
   @Get()
-  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO', 'FAMILIA')
   @ApiOperation({
     summary: 'Listar todos los PEIs',
     description: 'Obtiene todos los PEIs con información del estudiante y recursos asociados',
@@ -169,7 +168,7 @@ export class PeisController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO', 'FAMILIA')
   @ApiOperation({
     summary: 'Obtener PEI específico',
     description: `
@@ -181,9 +180,9 @@ Obtiene un PEI completo con todos sus datos estructurados.
 - 🔧 Adaptaciones curriculares
 - 📊 Criterios de evaluación
 - 🗓️ Planificación temporal
-- 🔊 Archivos de audio (ElevenLabs)
-- 📚 Recursos educativos (Linkup)
-- ⚙️ Workflows ejecutados (n8n)
+- 🔊 Síntesis de voz (AWS Polly)
+- 📚 Recursos educativos integrados
+- 📱 Acceso multiplataforma
     `,
   })
   @ApiParam({

@@ -460,7 +460,7 @@ export class AwsController {
         polly: {
           enabled: true,
           mode: process.env.AWS_POLLY_API_KEY ? 'real' : 'mock',
-          description: 'Text-to-speech (backup ElevenLabs)',
+          description: 'Text-to-speech con AWS Polly',
         },
       },
       architecture: {

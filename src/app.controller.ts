@@ -50,10 +50,10 @@ export class AppController {
         uptime: 123.45,
         environment: 'development',
         database: 'connected',
-        integrations: {
-          elevenlabs: 'mock',
-          linkup: 'mock',
-          n8n: 'mock'
+        apis: {
+          claude: 'configured',
+          aws: 'configured',
+          prisma: 'connected',
         },
         timestamp: '2025-10-11T15:53:20.000Z'
       }
@@ -66,9 +66,8 @@ export class AppController {
       environment: process.env.NODE_ENV || 'development',
       database: 'connected',
       integrations: {
-        elevenlabs: process.env.ELEVENLABS_API_KEY?.startsWith('sk-') ? 'configured' : 'mock',
-        linkup: process.env.LINKUP_API_KEY ? 'configured' : 'mock',
-        n8n: process.env.N8N_WEBHOOK_URL?.startsWith('https://') && !process.env.N8N_WEBHOOK_URL.includes('tu-instancia') ? 'configured' : 'mock',
+        aws: process.env.AWS_ACCESS_KEY_ID ? 'configured' : 'mock',
+        claude: process.env.CLAUDE_API_KEY?.startsWith('sk-') ? 'configured' : 'mock',
       },
       timestamp: new Date().toISOString(),
     };
@@ -91,15 +90,15 @@ export class AppController {
       endpoints: {
         peis: '/api/peis',
         uploads: '/api/uploads',
-        elevenlabs: '/api/elevenlabs',
-        linkup: '/api/linkup',
-        n8n: '/api/n8n',
+        auth: '/auth',
+        aws: '/aws',
+        reports: '/api/reports',
       },
       documentation: '/api/docs',
-      hackathon: {
-        event: 'Barcelona Hackathon 2025',
-        sponsors: ['ElevenLabs', 'Linkup', 'n8n', 'Norrsken'],
-        targetPrizes: ['$2000', '€500', '€500 + €600/año', 'Membership'],
+      project: {
+        name: 'NeuroPlan MVP',
+        target: 'Ayuntamiento de Barcelona',
+        technologies: ['NestJS', 'TypeScript', 'PostgreSQL', 'AWS', 'Prisma'],
       },
     };
   }

@@ -69,6 +69,9 @@ model Usuario {
   peisAprobados PEI[] @relation("PeiAprobador")
   activityLogs ActivityLog[]
   
+  // Relación familia-estudiantes (solo para rol FAMILIA)
+  hijosEstudiantes Student[] @relation("FamiliaStudents")
+  
   @@index([email])
   @@index([centroId])
   @@map("usuarios")
@@ -126,6 +129,10 @@ model Student {
   emailTutor     String?
   telefonoTutor  String?
   
+  // Relación con usuario familia (opcional)
+  usuarioFamiliaId String?
+  usuarioFamilia   Usuario? @relation("FamiliaStudents", fields: [usuarioFamiliaId], references: [id], onDelete: SetNull)
+  
   // Multi-tenancy
   centroId String
   centro   Centro @relation(fields: [centroId], references: [id], onDelete: Cascade)
@@ -146,6 +153,7 @@ model Student {
   
   @@index([centroId])
   @@index([emailTutor])
+  @@index([usuarioFamiliaId])
   @@map("students")
 }
 
@@ -318,7 +326,7 @@ model ActivityLog {
 // VALORES DE CONSTANTES (Reemplazo de Enums)
 // ==============================================
 
-// Roles: ADMIN, ORIENTADOR, PROFESOR, DIRECTOR_CENTRO
+// Roles: ADMIN, ORIENTADOR, PROFESOR, DIRECTOR_CENTRO, FAMILIA
 // Tipo Centro: PRIMARIA, ESO, BACHILLERATO, FP, UNIVERSIDAD
 // Estilo Aprendizaje: VISUAL, AUDITIVO, KINESTESICO, MIXTO
 // Estado Informe: PENDING, PROCESSING, COMPLETED, FAILED
@@ -327,3 +335,10 @@ model ActivityLog {
 // Formato Material: PDF, VIDEO, AUDIO, INTERACTIVO
 // Nivel Adaptación: BAJO, MEDIO, ALTO
 // Tipo Pasaporte: LOGRO, COMPETENCIA, CERTIFICACION, HITO
+
+// DESCRIPCIÓN DE ROLES:
+// ADMIN - Ayuntamiento (acceso total al sistema)
+// ORIENTADOR - Crea y gestiona PEIs, sube informes
+// PROFESOR - Lee PEIs y hace seguimiento (no edita)
+// DIRECTOR_CENTRO - Gestiona su colegio, vista global
+// FAMILIA - Solo ve PEI e informes de su hijo/a

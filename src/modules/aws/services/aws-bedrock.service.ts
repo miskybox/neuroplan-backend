@@ -265,7 +265,7 @@ Formato JSON con campos: answer, suggestions[].`;
     "Método Orton-Gillingham multisensorial (visual + auditivo + kinestésico)",
     "Fragmentación de tareas: dividir lecturas en secciones de 2-3 párrafos",
     "Refuerzo positivo cada 10 minutos de trabajo concentrado",
-    "Text-to-speech (ElevenLabs/Polly) para textos superiores a 500 palabras",
+    "Text-to-speech (AWS Polly) para textos superiores a 500 palabras",
     "Mapas mentales con colores para organizar ideas",
     "Pausas de 5 min cada 20 min de estudio (técnica Pomodoro adaptada)"
   ],

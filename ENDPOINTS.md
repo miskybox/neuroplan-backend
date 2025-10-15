@@ -18,6 +18,7 @@
 - `ORIENTADOR` - Creación/edición de PEIs, gestión de estudiantes, subida de informes
 - `PROFESOR` - Consulta de PEIs y seguimiento (solo lectura)
 - `DIRECTOR_CENTRO` - Vista global del centro educativo (solo lectura)
+- `FAMILIA` - Solo ve PEI e informes de su hijo/a (solo lectura)
 
 ---
 
@@ -149,7 +150,8 @@
 
 ### `GET /api/peis`
 **🔒 PROTEGIDO - Listar PEIs del usuario**  
-**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`
+**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`, `FAMILIA`  
+**Nota FAMILIA:** Solo ve PEIs de sus hijos asociados
 
 ```javascript
 // Headers: Authorization: Bearer <token>
@@ -179,7 +181,8 @@
 
 ### `GET /api/peis/:id`
 **🔒 PROTEGIDO - Obtener PEI específico**  
-**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`
+**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`, `FAMILIA`  
+**Nota FAMILIA:** Solo puede acceder a PEIs de sus hijos
 
 ```javascript
 // Headers: Authorization: Bearer <token>
@@ -310,7 +313,8 @@
 
 ### `GET /api/uploads/students`
 **🔒 PROTEGIDO - Listar estudiantes del centro**  
-**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`
+**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`, `FAMILIA`  
+**Nota FAMILIA:** Solo ve sus hijos asociados
 
 ```javascript
 // Headers: Authorization: Bearer <token>
@@ -346,7 +350,8 @@
 
 ### `GET /api/uploads/students/:id`
 **🔒 PROTEGIDO - Obtener estudiante específico**  
-**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`
+**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `DIRECTOR_CENTRO`, `FAMILIA`  
+**Nota FAMILIA:** Solo puede acceder a datos de sus hijos
 
 ```javascript
 // Headers: Authorization: Bearer <token>
@@ -417,7 +422,8 @@
 
 ### `GET /api/uploads/reports/:id`
 **🔒 PROTEGIDO - Obtener metadatos de informe**  
-**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`
+**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `FAMILIA`  
+**Nota FAMILIA:** Solo puede acceder a informes de sus hijos
 
 ```javascript
 // Headers: Authorization: Bearer <token>
@@ -442,7 +448,8 @@
 
 ### `GET /api/uploads/reports/:id/download`
 **🔒 PROTEGIDO - Descargar archivo de informe**  
-**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`
+**Roles permitidos:** `ADMIN`, `ORIENTADOR`, `PROFESOR`, `FAMILIA`  
+**Nota FAMILIA:** Solo puede descargar informes de sus hijos
 
 ```javascript
 // Headers: Authorization: Bearer <token>
@@ -747,6 +754,14 @@ Los siguientes usuarios están disponibles después de ejecutar el seeder:
   "email": "director@neuroplan.demo",
   "password": "demo123",
   "role": "DIRECTOR_CENTRO"
+}
+
+// FAMILIA (Nuevo)
+{
+  "email": "familia@demo.com",
+  "password": "demo123",
+  "role": "FAMILIA",
+  "hijo_asociado": "Carlos Rodríguez Pérez"
 }
 ```
 
