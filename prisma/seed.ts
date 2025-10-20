@@ -140,11 +140,11 @@ async function main() {
   console.log('   System: system@neuroplan.ai / SystemPass123!');
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Error en seed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+try {
+  await main();
+} catch (e) {
+  console.error('❌ Error en seed:', e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
+}

@@ -84,7 +84,7 @@ export class AwsComprehendService {
       { pattern: /depresión/gi, name: 'Depresión', category: 'TRASTORNO_EMOCIONAL' },
     ];
 
-    diagnosisPatterns.forEach(({ pattern, name, category }) => {
+    for (const { pattern, name, category } of diagnosisPatterns) {
       const matches = text.match(pattern);
       if (matches) {
         entities.diagnoses.push({
@@ -94,7 +94,7 @@ export class AwsComprehendService {
           occurrences: matches.length,
         });
       }
-    });
+    }
 
     // Common medications
     const medicationPatterns = [
@@ -106,7 +106,7 @@ export class AwsComprehendService {
       'fluoxetina',
     ];
 
-    medicationPatterns.forEach((med) => {
+    for (const med of medicationPatterns) {
       const regex = new RegExp(med, 'gi');
       if (regex.test(text)) {
         entities.medications.push({
@@ -114,7 +114,7 @@ export class AwsComprehendService {
           confidence: 0.95,
         });
       }
-    });
+    }
 
     // Common symptoms
     const symptomPatterns = [
@@ -126,14 +126,14 @@ export class AwsComprehendService {
       { pattern: /ansiedad/gi, name: 'Ansiedad' },
     ];
 
-    symptomPatterns.forEach(({ pattern, name }) => {
+    for (const { pattern, name } of symptomPatterns) {
       if (pattern.test(text)) {
         entities.symptoms.push({
           text: name,
           confidence: 0.88 + Math.random() * 0.1,
         });
       }
-    });
+    }
 
     // Common procedures
     const procedurePatterns = [
@@ -143,14 +143,14 @@ export class AwsComprehendService {
       { pattern: /terapia/gi, name: 'Terapia psicológica' },
     ];
 
-    procedurePatterns.forEach(({ pattern, name }) => {
+    for (const { pattern, name } of procedurePatterns) {
       if (pattern.test(text)) {
         entities.procedures.push({
           text: name,
           confidence: 0.91,
         });
       }
-    });
+    }
 
     // Anatomy (cognitive areas)
     const anatomyPatterns = [
@@ -160,14 +160,14 @@ export class AwsComprehendService {
       { pattern: /procesamiento.*visual/gi, name: 'Procesamiento visual' },
     ];
 
-    anatomyPatterns.forEach(({ pattern, name }) => {
+    for (const { pattern, name } of anatomyPatterns) {
       if (pattern.test(text)) {
         entities.anatomy.push({
           text: name,
           confidence: 0.89,
         });
       }
-    });
+    }
 
     entities.total =
       entities.diagnoses.length +
@@ -199,45 +199,45 @@ export class AwsComprehendService {
     }
 
     // Detect dates
-    const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}/g;
-    const dates = text.match(datePattern);
-    if (dates) {
-      dates.forEach((date) => {
-        phi.dates.push({
-          text: date,
-          type: 'DATE',
-        });
-      });
-    }
-
-    // Detect locations
-    const locationPattern = /(?:Madrid|Barcelona|Valencia|Sevilla|Zaragoza|Málaga|Bilbao)/gi;
-    const locations = text.match(locationPattern);
-    if (locations) {
-      locations.forEach((loc) => {
-        phi.locations.push({
-          text: loc,
-          type: 'LOCATION',
-        });
-      });
-    }
-
-    // Detect IDs (simplified)
-    const idPattern = /\b[A-Z]-?\d{4,6}\b/g;
-    const ids = text.match(idPattern);
-    if (ids) {
-      ids.forEach((id) => {
-        phi.ids.push({
-          text: id,
-          type: 'ID',
-        });
-      });
-    }
-
-    phi.hasSensitiveData =
-      phi.names.length > 0 ||
-      phi.dates.length > 0 ||
-      phi.ids.length > 0;
+        const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}/g;
+        const dates = text.match(datePattern);
+        if (dates) {
+          for (const date of dates) {
+            phi.dates.push({
+              text: date,
+              type: 'DATE',
+            });
+          }
+        }
+    
+        // Detect locations
+        const locationPattern = /(?:Madrid|Barcelona|Valencia|Sevilla|Zaragoza|Málaga|Bilbao)/gi;
+        const locations = text.match(locationPattern);
+        if (locations) {
+          for (const loc of locations) {
+            phi.locations.push({
+              text: loc,
+              type: 'LOCATION',
+            });
+          }
+        }
+    
+        // Detect IDs (simplified)
+        const idPattern = /\b[A-Z]-?\d{4,6}\b/g;
+        const ids = text.match(idPattern);
+        if (ids) {
+          for (const id of ids) {
+            phi.ids.push({
+              text: id,
+              type: 'ID',
+            });
+          }
+        }
+    
+        phi.hasSensitiveData =
+          phi.names.length > 0 ||
+          phi.dates.length > 0 ||
+          phi.ids.length > 0;
 
     return phi;
   }

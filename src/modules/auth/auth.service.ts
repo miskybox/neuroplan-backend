@@ -140,4 +140,46 @@ export class AuthService {
 
     return usuario;
   }
+
+  async getMe(userId: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: userId },
+      include: {
+        centro: {
+          select: {
+            id: true,
+            nombre: true,
+            codigo: true,
+            ciudad: true,
+            provincia: true,
+            tipo: true,
+          },
+        },
+        hijosEstudiantes: {
+          select: {
+            id: true,
+            nombre: true,
+            apellidos: true,
+            fechaNacimiento: true,
+            curso: true,
+            diagnosticos: true,
+            estiloAprendizaje: true,
+          },
+        },
+      },
+    });
+
+    if (!usuario || !usuario.activo) {
+      throw new UnauthorizedException('Usuario no autorizado');
+    }
+
+    // Remover password de la respuesta
+    const { password, ...usuarioSinPassword } = usuario;
+
+    return {
+      ...usuarioSinPassword,
+      // Información adicional según el rol
+      cantidadHijos: usuario.hijosEstudiantes?.length || 0,
+    };
+  }
 }

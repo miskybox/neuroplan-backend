@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import * as pdfParse from 'pdf-parse';
 
 @Injectable()
@@ -15,13 +15,16 @@ export class PeisService {
   /**
    * Genera un PEI completo desde diagnóstico directo (para frontend)
    */
-  async generatePeiFromDiagnosis(diagnosisData: {
-    studentId: string;
-    diagnosis: string[];
-    symptoms?: string[];
-    strengths?: string[];
-    additionalNotes?: string;
-  }) {
+  async generatePeiFromDiagnosis(
+    diagnosisData: {
+      studentId: string;
+      diagnosis: string[];
+      symptoms?: string[];
+      strengths?: string[];
+      additionalNotes?: string;
+    },
+    userId: string, // Usuario autenticado que crea el PEI
+  ) {
     // 1. Validar que el estudiante existe
     const student = await this.prisma.student.findUnique({
       where: { id: diagnosisData.studentId },
@@ -77,7 +80,7 @@ export class PeisService {
         cronograma: JSON.stringify(peiData.timeline),
         estado: 'BORRADOR',
         creadoPor: {
-          connect: { id: 'system' }, // TODO: Usar usuario autenticado
+          connect: { id: userId }, // ✅ Usuario autenticado
         },
         student: {
           connect: { id: diagnosisData.studentId },
@@ -122,7 +125,7 @@ export class PeisService {
   /**
    * Genera un PEI completo a partir de un informe subido
    */
-  async generatePeiFromReport(dto: GeneratePeiFromReportDto) {
+  async generatePeiFromReport(dto: GeneratePeiFromReportDto, userId: string) {
     // 1. Validar que el informe existe y pertenece al estudiante
     const report = await this.prisma.report.findFirst({
       where: {
@@ -171,7 +174,7 @@ export class PeisService {
         cronograma: JSON.stringify(peiData.timeline),
         estado: 'BORRADOR',
         creadoPor: {
-          connect: { email: 'system@neuroplan.ai' }, // Usuario system
+          connect: { id: userId }, // ✅ Usuario autenticado
         },
         student: {
           connect: { id: dto.studentId },
@@ -482,7 +485,26 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
   /**
    * Obtiene todos los PEIs
    */
-  async getAllPeis() {
+  async getAllPeis(userId?: string, userRole?: string) {
+    // Si es FAMILIA, filtrar por usuarioFamiliaId
+    if (userRole === 'FAMILIA' && userId) {
+      // Solo devolver PEIs de estudiantes vinculados al usuario
+      return this.prisma.pEI.findMany({
+        where: {
+          student: {
+            usuarioFamiliaId: userId
+          }
+        },
+        include: {
+          student: true,
+          report: true,
+          materialesAdaptados: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+    
+    // Para otros roles, devolver todos los PEIs
     return this.prisma.pEI.findMany({
       include: {
         student: true,
@@ -496,7 +518,7 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
   /**
    * Obtiene un PEI específico
    */
-  async getPeiById(id: string) {
+  async getPeiById(id: string, userId?: string, userRole?: string) {
     const pei = await this.prisma.pEI.findUnique({
       where: { id },
       include: {
@@ -508,6 +530,14 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
 
     if (!pei) {
       throw new BadRequestException('PEI no encontrado');
+    }
+    
+    // Verificar acceso si es FAMILIA
+    if (userRole === 'FAMILIA' && userId) {
+      // Verificar que el PEI pertenezca a un estudiante vinculado al usuario
+      if (pei.student.usuarioFamiliaId !== userId) {
+        throw new BadRequestException('No tienes acceso a este PEI');
+      }
     }
 
     // Parsear campos JSON

@@ -27,9 +27,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getProfile(@CurrentUser() user: any) {
+    const usuarioCompleto = await this.authService.getMe(user.id);
     return {
       message: 'Perfil del usuario autenticado',
-      usuario: user,
+      usuario: usuarioCompleto,
     };
   }
 }

@@ -17,6 +17,7 @@ import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('peis')
 @ApiBearerAuth()
@@ -26,6 +27,7 @@ export class PeisController {
   constructor(private readonly peisService: PeisService) {}
 
   @Post('generate-from-diagnosis')
+  @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
     summary: '🧠 Generar PEI desde diagnóstico directo',
     description: `
@@ -70,14 +72,17 @@ export class PeisController {
     },
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  async generatePeiFromDiagnosis(@Body() diagnosisData: {
-    studentId: string;
-    diagnosis: string[];
-    symptoms?: string[];
-    strengths?: string[];
-    additionalNotes?: string;
-  }) {
-    return this.peisService.generatePeiFromDiagnosis(diagnosisData);
+  async generatePeiFromDiagnosis(
+    @Body() diagnosisData: {
+      studentId: string;
+      diagnosis: string[];
+      symptoms?: string[];
+      strengths?: string[];
+      additionalNotes?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.peisService.generatePeiFromDiagnosis(diagnosisData, user.id);
   }
 
   @Post('generate')
@@ -116,8 +121,11 @@ export class PeisController {
     },
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos o informe no encontrado' })
-  async generatePei(@Body() generatePeiDto: GeneratePeiFromReportDto) {
-    return this.peisService.generatePeiFromReport(generatePeiDto);
+  async generatePei(
+    @Body() generatePeiDto: GeneratePeiFromReportDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.peisService.generatePeiFromReport(generatePeiDto, user.id);
   }
 
   @Get()
@@ -163,8 +171,8 @@ export class PeisController {
       ],
     },
   })
-  async getAllPeis() {
-    return this.peisService.getAllPeis();
+  async getAllPeis(@CurrentUser() user: any) {
+    return this.peisService.getAllPeis(user.id, user.rol);
   }
 
   @Get(':id')
@@ -228,9 +236,9 @@ Obtiene un PEI completo con todos sus datos estructurados.
     },
   })
   @ApiResponse({ status: 404, description: 'PEI no encontrado' })
-  async getPeiById(@Param('id') id: string) {
+  async getPeiById(@Param('id') id: string, @CurrentUser() user: any) {
     try {
-      return await this.peisService.getPeiById(id);
+      return await this.peisService.getPeiById(id, user.id, user.rol);
     } catch (error: any) {
       throw new NotFoundException(error.message || 'PEI no encontrado');
     }
@@ -323,8 +331,8 @@ Genera y descarga el PEI en formato PDF oficial para:
       const pdfBuffer = await this.peisService.generatePeiPdf(id);
 
       const filename = `PEI_${pei.student?.nombre || 'estudiante'}_${pei.student?.apellidos || ''}_v${pei.version}.pdf`
-        .replace(/\s+/g, '_')
-        .replace(/[^a-zA-Z0-9._-]/g, '');
+        .replaceAll(/\s+/g, '_')
+        .replaceAll(/[^a-zA-Z0-9._-]/g, '');
 
       res.set({
         'Content-Type': 'application/pdf',

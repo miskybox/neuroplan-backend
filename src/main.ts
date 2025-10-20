@@ -3,7 +3,18 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 
-async function bootstrap() {
+// Capturar errores no manejados
+process.on('uncaughtException', (error) => {
+  console.error('ERROR NO CAPTURADO:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('PROMESA RECHAZADA NO MANEJADA:', promise, 'razon:', reason);
+  process.exit(1);
+});
+
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   // Seguridad: Helmet para headers HTTP seguros
@@ -34,25 +45,41 @@ async function bootstrap() {
     }),
   );
 
-  const port = Number(process.env.PORT) || 3001;
-  await app.listen(port, '0.0.0.0');
+  const port = 3001;
+  await app.listen(port);
 
-  console.log(`
-🚀 NeuroPlan AI Campus - MVP iniciado
+  console.log('\n==============================================');
+  console.log('   NeuroPlan AI Campus - Backend MVP');
+  console.log('==============================================');
+  console.log(`\nAPI: http://localhost:${port}`);
+  console.log(`Modo: ${process.env.NODE_ENV || 'development'}\n`);
+  console.log('Sistema profesional configurado:');
+  console.log('- Autenticacion JWT');
+  console.log('- Control de acceso por roles (ADMIN, ORIENTADOR, PROFESOR, DIRECTOR_CENTRO, FAMILIA)');
+  console.log('- Multi-tenancy');
+  console.log('- Validacion estricta');
+  console.log('- Headers de seguridad');
+  console.log('- Auditoria de acciones\n');
 
-🌐 API: http://localhost:${port}
- Modo: ${process.env.NODE_ENV || 'development'}
+  // Signal handlers para mantener el proceso vivo
+  process.on('SIGTERM', async () => {
+    console.log('\nRecibida senal SIGTERM - Cerrando servidor..');
+    await app.close();
+    process.exit(0);
+  });
 
-✅ Sistema profesional configurado:
-   - Autenticación JWT
-   - Control de acceso por roles (ADMIN, ORIENTADOR, PROFESOR, DIRECTOR_CENTRO, FAMILIA)
-   - Multi-tenancy
-   - Validación estricta
-   - Headers de seguridad
-   - Auditoría de acciones
-
-🎯 Listo para presentar al Ayuntamiento
-  `);
+  process.on('SIGINT', async () => {
+    console.log('\n\nRecibida senal SIGINT - Cerrando servidor..');
+    await app.close();
+    process.exit(0);
+  });
 }
 
-bootstrap();
+(async () => {
+  try {
+    await bootstrap();
+  } catch (error) {
+    console.error('Error al iniciar la aplicacion:', error);
+    process.exit(1);
+  }
+})();
