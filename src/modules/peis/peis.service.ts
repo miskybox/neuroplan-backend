@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
 import * as fs from 'node:fs';
-import * as pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 
 @Injectable()
 export class PeisService {
