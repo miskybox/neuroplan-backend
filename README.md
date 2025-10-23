@@ -564,7 +564,7 @@ Este software es confidencial y solo puede ser utilizado por personal autorizado
 
 Para consultas técnicas o problemas:
 
-- 📧 Email: [e.sisalli#yahoo.com]
+- 📧 Email: [e.sisalli@yahoo.com]
 -
 
 
