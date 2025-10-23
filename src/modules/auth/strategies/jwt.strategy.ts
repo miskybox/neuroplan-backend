@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PrismaService } from '../../prisma/prisma.service';
+import pool from '../../../db';
 
 export interface JwtPayload {
   sub: string; // Usuario ID
@@ -12,25 +12,23 @@ export interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private readonly prisma: PrismaService) {
+  constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET || 'neuroplan-secret-key-change-in-production',
     });
   }
-
   async validate(payload: JwtPayload) {
-    // Verificar que el usuario existe y está activo
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id: payload.sub },
-      include: { centro: true },
-    });
-
-    if (!usuario?.activo) {
+    // Buscar usuario por id y traer centro
+    const userRes = await pool.query(
+      'SELECT u.*, c.* FROM usuario u LEFT JOIN centro c ON u."centroId" = c.id WHERE u.id = $1',
+      [payload.sub]
+    );
+    const usuario = userRes.rows[0];
+    if (!usuario || !usuario.activo) {
       throw new UnauthorizedException('Usuario no autorizado o inactivo');
     }
-
     // Retornar el usuario (se adjunta a request.user)
     return {
       id: usuario.id,
@@ -38,8 +36,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       nombre: usuario.nombre,
       apellidos: usuario.apellidos,
       rol: usuario.rol,
-      centroId: usuario.centroId,
-      centro: usuario.centro,
+      centroId: usuario.centroid,
+      centro: usuario.nombre_centro ? {
+        id: usuario.centroid,
+        nombre: usuario.nombre_centro,
+        direccion: usuario.direccion,
+        telefono: usuario.telefono
+      } : null,
     };
   }
 }

@@ -1,86 +1,58 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import pool from '../../db';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   async register(dto: RegisterDto) {
     // Verificar si el usuario ya existe
-    const existingUser = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (existingUser) {
+    const { rows: existingUsers } = await pool.query(
+      'SELECT * FROM "User" WHERE email = $1',
+      [dto.email]
+    );
+    if (existingUsers.length > 0) {
       throw new ConflictException('El email ya está registrado');
-    }
-
-    // Verificar que el centro existe
-    const centro = await this.prisma.centro.findUnique({
-      where: { id: dto.centroId },
-    });
-
-    if (!centro) {
-      throw new ConflictException('El centro especificado no existe');
     }
 
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     // Crear usuario
-    const usuario = await this.prisma.usuario.create({
-      data: {
-        email: dto.email,
-        password: hashedPassword,
-        nombre: dto.nombre,
-        apellidos: dto.apellidos,
-        rol: dto.rol,
-        centroId: dto.centroId,
-        asignaturas: dto.asignaturas,
-      },
-      include: {
-        centro: true,
-      },
-    });
+    const { rows } = await pool.query(
+      `INSERT INTO "User" (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role`,
+      [dto.email, hashedPassword, dto.rol]
+    );
+    const usuario = rows[0];
 
     // Generar token JWT
     const payload: JwtPayload = {
       sub: usuario.id,
       email: usuario.email,
-      rol: usuario.rol,
-      centroId: usuario.centroId,
+      rol: usuario.role,
+      centroId: null, // Ajusta si tienes centroId en tu modelo
     };
 
     const accessToken = this.jwtService.sign(payload);
 
     return {
       accessToken,
-      usuario: {
-        id: usuario.id,
-        email: usuario.email,
-        nombre: usuario.nombre,
-        apellidos: usuario.apellidos,
-        rol: usuario.rol,
-        centroId: usuario.centroId,
-        centro: usuario.centro,
-      },
+      usuario,
     };
   }
 
   async login(dto: LoginDto) {
     // Buscar usuario
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
-      include: { centro: true },
-    });
+    const { rows } = await pool.query(
+      'SELECT * FROM "User" WHERE email = $1',
+      [dto.email]
+    );
+    const usuario = rows[0];
 
     if (!usuario) {
       throw new UnauthorizedException('Credenciales inválidas');
@@ -88,28 +60,16 @@ export class AuthService {
 
     // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(dto.password, usuario.password);
-
     if (!isPasswordValid) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
-
-    // Verificar que está activo
-    if (!usuario.activo) {
-      throw new UnauthorizedException('Usuario inactivo');
-    }
-
-    // Actualizar lastLogin
-    await this.prisma.usuario.update({
-      where: { id: usuario.id },
-      data: { lastLogin: new Date() },
-    });
 
     // Generar token JWT
     const payload: JwtPayload = {
       sub: usuario.id,
       email: usuario.email,
-      rol: usuario.rol,
-      centroId: usuario.centroId,
+      rol: usuario.role,
+      centroId: null, // Ajusta si tienes centroId en tu modelo
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -119,67 +79,32 @@ export class AuthService {
       usuario: {
         id: usuario.id,
         email: usuario.email,
-        nombre: usuario.nombre,
-        apellidos: usuario.apellidos,
-        rol: usuario.rol,
-        centroId: usuario.centroId,
-        centro: usuario.centro,
+        rol: usuario.role,
       },
     };
   }
 
   async validateUser(userId: string) {
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id: userId },
-      include: { centro: true },
-    });
-
-    if (!usuario || !usuario.activo) {
+    const { rows } = await pool.query(
+      'SELECT * FROM "User" WHERE id = $1',
+      [userId]
+    );
+    const usuario = rows[0];
+    if (!usuario) {
       throw new UnauthorizedException('Usuario no autorizado');
     }
-
     return usuario;
   }
 
   async getMe(userId: string) {
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id: userId },
-      include: {
-        centro: {
-          select: {
-            id: true,
-            nombre: true,
-            codigo: true,
-            ciudad: true,
-            provincia: true,
-            tipo: true,
-          },
-        },
-        hijosEstudiantes: {
-          select: {
-            id: true,
-            nombre: true,
-            apellidos: true,
-            fechaNacimiento: true,
-            curso: true,
-            diagnosticos: true,
-            estiloAprendizaje: true,
-          },
-        },
-      },
-    });
-
-    if (!usuario || !usuario.activo) {
+    const { rows } = await pool.query(
+      'SELECT id, email, role FROM "User" WHERE id = $1',
+      [userId]
+    );
+    const usuario = rows[0];
+    if (!usuario) {
       throw new UnauthorizedException('Usuario no autorizado');
     }
-
-    // Remover password de la respuesta
-    const { password, ...usuarioSinPassword } = usuario;
-
-    return {
-      ...usuarioSinPassword,
-      // Información adicional según el rol
-      cantidadHijos: usuario.hijosEstudiantes?.length || 0,
-    };
+    return usuario;
   }
 }

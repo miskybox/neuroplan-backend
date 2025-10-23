@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from './modules/prisma/prisma.module';
 import { PeisModule } from './modules/peis/peis.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { AwsModule } from './modules/aws/aws.module';
@@ -16,7 +15,6 @@ import { AppController } from './app.controller';
     }),
     
     // Módulos core
-    PrismaModule,
     
     // Autenticación y seguridad
     AuthModule,

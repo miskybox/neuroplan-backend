@@ -1,14 +1,13 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
 import * as fs from 'node:fs';
 import pdfParse from 'pdf-parse';
+import pool from '../../db';
 
 @Injectable()
 export class PeisService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -26,10 +25,8 @@ export class PeisService {
     userId: string, // Usuario autenticado que crea el PEI
   ) {
     // 1. Validar que el estudiante existe
-    const student = await this.prisma.student.findUnique({
-      where: { id: diagnosisData.studentId },
-    });
-
+    const studentRes = await pool.query('SELECT * FROM student WHERE id = $1', [diagnosisData.studentId]);
+    const student = studentRes.rows[0];
     if (!student) {
       throw new BadRequestException('Estudiante no encontrado');
     }
@@ -54,58 +51,60 @@ export class PeisService {
     const peiData = await this.generatePeiStructure(analysis, student);
 
     // 5. Crear un report virtual para cumplir con el esquema
-    const virtualReport = await this.prisma.report.create({
-      data: {
-        filename: `diagnosis-${Date.now()}.json`,
-        originalName: `Diagnóstico directo - ${student.nombre} ${student.apellidos}`,
-        mimeType: 'application/json',
-        size: JSON.stringify(diagnosisData).length,
-        path: `/virtual/diagnosis-${Date.now()}.json`,
-        extractedText: JSON.stringify(analysis),
-        status: 'COMPLETED',
-        processedAt: new Date(),
-        studentId: diagnosisData.studentId,
-      },
-    });
+    const virtualReportRes = await pool.query(
+      `INSERT INTO report (filename, "originalName", "mimeType", size, path, "extractedText", status, "processedAt", "studentId")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        `diagnosis-${Date.now()}.json`,
+        `Diagnóstico directo - ${student.nombre} ${student.apellidos}`,
+        'application/json',
+        JSON.stringify(diagnosisData).length,
+        `/virtual/diagnosis-${Date.now()}.json`,
+        JSON.stringify(analysis),
+        'COMPLETED',
+        new Date(),
+        diagnosisData.studentId
+      ]
+    );
+    const virtualReport = virtualReportRes.rows[0];
 
     // 6. Crear PEI en base de datos
-    const pei = await this.prisma.pEI.create({
-      data: {
-        resumen: peiData.summary,
-        diagnostico: peiData.diagnosis,
-        objetivos: JSON.stringify(peiData.objectives),
-        adaptaciones: JSON.stringify(peiData.adaptations),
-        estrategias: JSON.stringify(peiData.strategies),
-        evaluacion: JSON.stringify(peiData.evaluation),
-        cronograma: JSON.stringify(peiData.timeline),
-        estado: 'BORRADOR',
-        creadoPor: {
-          connect: { id: userId }, // ✅ Usuario autenticado
-        },
-        student: {
-          connect: { id: diagnosisData.studentId },
-        },
-        report: {
-          connect: { id: virtualReport.id },
-        },
-      },
-    });
+    const peiRes = await pool.query(
+      `INSERT INTO pei (resumen, diagnostico, objetivos, adaptaciones, estrategias, evaluacion, cronograma, estado, "creadoPorId", "studentId", "reportId")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [
+        peiData.summary,
+        peiData.diagnosis,
+        JSON.stringify(peiData.objectives),
+        JSON.stringify(peiData.adaptations),
+        JSON.stringify(peiData.strategies),
+        JSON.stringify(peiData.evaluation),
+        JSON.stringify(peiData.timeline),
+        'BORRADOR',
+        userId,
+        diagnosisData.studentId,
+        virtualReport.id
+      ]
+    );
+    const pei = peiRes.rows[0];
 
-    // 6. Log de actividad
-    await this.prisma.activityLog.create({
-      data: {
-        accion: 'generate_pei_from_diagnosis',
-        entidad: 'pei',
-        entidadId: pei.id,
-        detalles: JSON.stringify({
+    // 7. Log de actividad
+    await pool.query(
+      `INSERT INTO "activityLog" (accion, entidad, "entidadId", detalles)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        'generate_pei_from_diagnosis',
+        'pei',
+        pei.id,
+        JSON.stringify({
           diagnosis: diagnosisData.diagnosis,
           studentId: diagnosisData.studentId,
           method: 'direct_diagnosis',
-        }),
-      },
-    });
+        })
+      ]
+    );
 
-    // 7. Retornar PEI con datos expandidos
+    // 8. Retornar PEI con datos expandidos
     return {
       ...pei,
       objectives: JSON.parse(pei.objetivos),
@@ -127,16 +126,11 @@ export class PeisService {
    */
   async generatePeiFromReport(dto: GeneratePeiFromReportDto, userId: string) {
     // 1. Validar que el informe existe y pertenece al estudiante
-    const report = await this.prisma.report.findFirst({
-      where: {
-        id: dto.reportId,
-        studentId: dto.studentId,
-      },
-      include: {
-        student: true,
-      },
-    });
-
+    const reportRes = await pool.query(
+      'SELECT * FROM report WHERE id = $1 AND "studentId" = $2',
+      [dto.reportId, dto.studentId]
+    );
+    const report = reportRes.rows[0];
     if (!report) {
       throw new BadRequestException('Informe no encontrado o no pertenece al estudiante');
     }
@@ -145,15 +139,11 @@ export class PeisService {
     let extractedText = report.extractedText;
     if (!extractedText) {
       extractedText = await this.extractTextFromReport(report);
-      
       // Actualizar el informe con el texto extraído
-      await this.prisma.report.update({
-        where: { id: report.id },
-        data: { 
-          extractedText,
-          status: 'PROCESSING',
-        },
-      });
+      await pool.query(
+        'UPDATE report SET "extractedText" = $1, status = $2 WHERE id = $3',
+        [extractedText, 'PROCESSING', report.id]
+      );
     }
 
     // 3. Analizar con Claude AI (mock para hackathon)
@@ -163,52 +153,48 @@ export class PeisService {
     const peiData = await this.generatePeiStructure(analysis, report.student);
 
     // 5. Crear PEI en base de datos
-    const pei = await this.prisma.pEI.create({
-      data: {
-        resumen: peiData.summary,
-        diagnostico: peiData.diagnosis,
-        objetivos: JSON.stringify(peiData.objectives),
-        adaptaciones: JSON.stringify(peiData.adaptations),
-        estrategias: JSON.stringify(peiData.strategies),
-        evaluacion: JSON.stringify(peiData.evaluation),
-        cronograma: JSON.stringify(peiData.timeline),
-        estado: 'BORRADOR',
-        creadoPor: {
-          connect: { id: userId }, // ✅ Usuario autenticado
-        },
-        student: {
-          connect: { id: dto.studentId },
-        },
-        report: {
-          connect: { id: dto.reportId },
-        },
-      },
-    });
+    const peiRes = await pool.query(
+      `INSERT INTO pei (resumen, diagnostico, objetivos, adaptaciones, estrategias, evaluacion, cronograma, estado, "creadoPorId", "studentId", "reportId")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [
+        peiData.summary,
+        peiData.diagnosis,
+        JSON.stringify(peiData.objectives),
+        JSON.stringify(peiData.adaptations),
+        JSON.stringify(peiData.strategies),
+        JSON.stringify(peiData.evaluation),
+        JSON.stringify(peiData.timeline),
+        'BORRADOR',
+        userId,
+        dto.studentId,
+        dto.reportId
+      ]
+    );
+    const pei = peiRes.rows[0];
 
     // 6. Marcar informe como completado
-    await this.prisma.report.update({
-      where: { id: report.id },
-      data: { 
-        status: 'COMPLETED',
-        processedAt: new Date(),
-      },
-    });
+    await pool.query(
+      'UPDATE report SET status = $1, "processedAt" = $2 WHERE id = $3',
+      ['COMPLETED', new Date(), report.id]
+    );
 
     // 7. Log de actividad
-    await this.prisma.activityLog.create({
-      data: {
-        accion: 'generate_pei',
-        entidad: 'pei',
-        entidadId: pei.id,
-        detalles: JSON.stringify({
+    await pool.query(
+      `INSERT INTO "activityLog" (accion, entidad, "entidadId", detalles)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        'generate_pei',
+        'pei',
+        pei.id,
+        JSON.stringify({
           studentId: dto.studentId,
           reportId: dto.reportId,
           objectivesCount: peiData.objectives.length,
-        }),
-      },
-    });
+        })
+      ]
+    );
 
-    return pei;
+  return pei;
   }
 
   /**
@@ -489,57 +475,51 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
     // Si es FAMILIA, filtrar por usuarioFamiliaId
     if (userRole === 'FAMILIA' && userId) {
       // Solo devolver PEIs de estudiantes vinculados al usuario
-      return this.prisma.pEI.findMany({
-        where: {
-          student: {
-            usuarioFamiliaId: userId
-          }
-        },
-        include: {
-          student: true,
-          report: true,
-          materialesAdaptados: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      const peisRes = await pool.query(
+        `SELECT pei.*, student.*, report.*
+         FROM pei
+         JOIN student ON pei."studentId" = student.id
+         JOIN report ON pei."reportId" = report.id
+         WHERE student."usuarioFamiliaId" = $1
+         ORDER BY pei."createdAt" DESC`,
+        [userId]
+      );
+      return peisRes.rows;
     }
-    
     // Para otros roles, devolver todos los PEIs
-    return this.prisma.pEI.findMany({
-      include: {
-        student: true,
-        report: true,
-        materialesAdaptados: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const peisRes = await pool.query(
+      `SELECT pei.*, student.*, report.*
+       FROM pei
+       JOIN student ON pei."studentId" = student.id
+       JOIN report ON pei."reportId" = report.id
+       ORDER BY pei."createdAt" DESC`
+    );
+    return peisRes.rows;
   }
 
   /**
    * Obtiene un PEI específico
    */
   async getPeiById(id: string, userId?: string, userRole?: string) {
-    const pei = await this.prisma.pEI.findUnique({
-      where: { id },
-      include: {
-        student: true,
-        report: true,
-        materialesAdaptados: true,
-      },
-    });
-
+    // Obtener PEI único
+    const peiRes = await pool.query(
+      `SELECT pei.*, student.*, report.*
+       FROM pei
+       JOIN student ON pei."studentId" = student.id
+       JOIN report ON pei."reportId" = report.id
+       WHERE pei.id = $1`,
+      [id]
+    );
+    const pei = peiRes.rows[0];
     if (!pei) {
       throw new BadRequestException('PEI no encontrado');
     }
-    
     // Verificar acceso si es FAMILIA
     if (userRole === 'FAMILIA' && userId) {
-      // Verificar que el PEI pertenezca a un estudiante vinculado al usuario
-      if (pei.student.usuarioFamiliaId !== userId) {
+      if (pei.usuarioramiliaid && pei.usuarioramiliaid !== userId) {
         throw new BadRequestException('No tienes acceso a este PEI');
       }
     }
-
     // Parsear campos JSON
     return {
       ...pei,
@@ -561,13 +541,15 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
       throw new BadRequestException('Estado no válido');
     }
 
-    return this.prisma.pEI.update({
-      where: { id },
-      data: { 
-        estado: status,
-        ...(status === 'APROBADO' && { fechaAprobacion: new Date() }),
-      },
-    });
+    // Actualizar estado del PEI
+    await pool.query(
+      'UPDATE pei SET estado = $1, "fechaAprobacion" = $2 WHERE id = $3',
+      [
+        status,
+        status === 'APROBADO' ? new Date() : null,
+        id
+      ]
+    );
   }
 
   /**

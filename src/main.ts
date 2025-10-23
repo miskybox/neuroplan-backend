@@ -17,6 +17,9 @@ process.on('unhandledRejection', (reason, promise) => {
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
+  // ⭐ PREFIJO GLOBAL - Todas las rutas tendrán /api
+  app.setGlobalPrefix('api');
+
   // Seguridad: Helmet para headers HTTP seguros
   app.use(helmet());
 
@@ -51,7 +54,9 @@ async function bootstrap(): Promise<void> {
   console.log('\n==============================================');
   console.log('   NeuroPlan AI Campus - Backend MVP');
   console.log('==============================================');
-  console.log(`\nAPI: http://localhost:${port}`);
+  console.log(`\nAPI: http://localhost:${port}/api`);
+  console.log(`Health: http://localhost:${port}/api/health`);
+  console.log(`Login: http://localhost:${port}/api/auth/login`);
   console.log(`Modo: ${process.env.NODE_ENV || 'development'}\n`);
   console.log('Sistema profesional configurado:');
   console.log('- Autenticacion JWT');
@@ -59,7 +64,8 @@ async function bootstrap(): Promise<void> {
   console.log('- Multi-tenancy');
   console.log('- Validacion estricta');
   console.log('- Headers de seguridad');
-  console.log('- Auditoria de acciones\n');
+  console.log('- Auditoria de acciones');
+  console.log('- Prefijo global: /api\n');
 
   // Signal handlers para mantener el proceso vivo
   process.on('SIGTERM', async () => {
