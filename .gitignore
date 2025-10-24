@@ -19,6 +19,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# Backup folders
+__backup__/
+backup/
+
 # Logs
 logs
 *.log

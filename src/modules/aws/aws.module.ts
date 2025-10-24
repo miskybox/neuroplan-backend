@@ -6,6 +6,8 @@ import {
   AwsS3Service,
   AwsPollyService,
 } from './services';
+import { AwsElevenlabsService } from './services/aws-elevenlabs.service';
+import { AwsN8nService } from './services/aws-n8n.service';
 import { AwsController } from './aws.controller';
 
 @Module({
@@ -16,6 +18,8 @@ import { AwsController } from './aws.controller';
     AwsComprehendService,
     AwsS3Service,
     AwsPollyService,
+    AwsElevenlabsService,
+    AwsN8nService,
   ],
   exports: [
     AwsBedrockService,
@@ -23,6 +27,8 @@ import { AwsController } from './aws.controller';
     AwsComprehendService,
     AwsS3Service,
     AwsPollyService,
+    AwsElevenlabsService,
+    AwsN8nService,
   ],
 })
 export class AwsModule {}

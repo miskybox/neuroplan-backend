@@ -47,29 +47,29 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // Buscar usuario
+    // Search user
     const { rows } = await pool.query(
       'SELECT * FROM "User" WHERE email = $1',
       [dto.email]
     );
-    const usuario = rows[0];
+    const user = rows[0];
 
-    if (!usuario) {
+    if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(dto.password, usuario.password);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Generar token JWT
+    // Generate JWT token
     const payload: JwtPayload = {
-      sub: usuario.id,
-      email: usuario.email,
-      rol: usuario.role,
-      centroId: null, // Ajusta si tienes centroId en tu modelo
+      sub: user.id,
+      email: user.email,
+      rol: user.role,
+      centroId: null, // Adjust if you have centroId in your model
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -77,9 +77,9 @@ export class AuthService {
     return {
       accessToken,
       usuario: {
-        id: usuario.id,
-        email: usuario.email,
-        rol: usuario.role,
+        id: user.id,
+        email: user.email,
+        rol: user.role,
       },
     };
   }

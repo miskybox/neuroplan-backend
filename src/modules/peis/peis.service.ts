@@ -24,26 +24,26 @@ export class PeisService {
     },
     userId: string, // Usuario autenticado que crea el PEI
   ) {
-    // 1. Validar que el estudiante existe
-    const studentRes = await pool.query('SELECT * FROM student WHERE id = $1', [diagnosisData.studentId]);
+    // 1. Validate that the student exists
+    const studentRes = await pool.query('SELECT * FROM "Student" WHERE id = $1', [diagnosisData.studentId]);
     const student = studentRes.rows[0];
     if (!student) {
       throw new BadRequestException('Estudiante no encontrado');
     }
 
-    // 2. Calcular edad del estudiante
+    // 2. Calculate student age
     const today = new Date();
-    const birthDate = new Date(student.fechaNacimiento);
+    const birthDate = new Date(student.birth_date);
     const age = today.getFullYear() - birthDate.getFullYear();
 
-    // 3. Preparar análisis desde el diagnóstico directo
+    // 3. Prepare analysis from direct diagnosis
     const analysis = {
       diagnosis: diagnosisData.diagnosis,
       symptoms: diagnosisData.symptoms || [],
       strengths: diagnosisData.strengths || [],
       additionalInfo: diagnosisData.additionalNotes || '',
-      studentName: `${student.nombre} ${student.apellidos}`,
-      gradeLevel: student.curso,
+      studentName: `${student.name} ${student.last_name}`,
+      gradeLevel: student.grade,
       age,
     };
 
@@ -617,5 +617,126 @@ startxref
     `;
 
     return Buffer.from(mockPdf);
+  }
+
+  /**
+   * Obtener PEIs de un estudiante específico
+   */
+  async getPeisByStudent(studentId: string, userId: string, userRole: string) {
+    try {
+      // Verificar permisos según el rol
+      let query = `
+        SELECT 
+          p.id,
+          p.version,
+          p.summary,
+          p.status,
+          p.created_at as "createdAt",
+          p.updated_at as "updatedAt",
+          s.nombre,
+          s.apellidos,
+          s.curso
+        FROM "PEI" p
+        JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."studentId" = $1
+      `;
+
+      const params = [studentId];
+
+      // Aplicar filtros según el rol
+      if (userRole === 'FAMILIA') {
+        query += ` AND s."familyId" = $2`;
+        params.push(userId);
+      }
+
+      query += ` ORDER BY p.created_at DESC`;
+
+      const result = await pool.query(query, params);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting PEIs by student:', error);
+      throw new BadRequestException('Error al obtener PEIs del estudiante');
+    }
+  }
+
+  /**
+   * Generar audio del PEI usando AWS Polly
+   */
+  async generatePeiAudio(peiId: string, userId: string) {
+    try {
+      // Obtener el PEI
+      const pei = await this.getPeiById(peiId, userId, 'ADMIN');
+      
+      if (!pei) {
+        throw new BadRequestException('PEI no encontrado');
+      }
+
+      // Generar contenido de audio
+      const audioContent = this.prepareAudioContent(pei);
+      
+      // Simular generación de audio (en producción usar AWS Polly)
+      const audioUrl = `https://neuroplan-audio.s3.amazonaws.com/pei-${peiId}-${Date.now()}.mp3`;
+      const duration = this.estimateAudioDuration(audioContent);
+
+      // Guardar información del audio en la base de datos
+      const audioRecord = await pool.query(`
+        INSERT INTO "AudioFile" ("peiId", url, duration, language, voice, "createdAt")
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING id, url, duration, language, voice, "createdAt"
+      `, [peiId, audioUrl, duration, 'es', 'Conchita']);
+
+      return {
+        id: audioRecord.rows[0].id,
+        url: audioRecord.rows[0].url,
+        duration: audioRecord.rows[0].duration,
+        language: audioRecord.rows[0].language,
+        voice: audioRecord.rows[0].voice,
+        createdAt: audioRecord.rows[0].createdAt,
+      };
+    } catch (error) {
+      console.error('Error generating PEI audio:', error);
+      throw new BadRequestException('Error al generar audio del PEI');
+    }
+  }
+
+  /**
+   * Preparar contenido para audio
+   */
+  private prepareAudioContent(pei: any): string {
+    let content = `Plan Educativo Individualizado para ${pei.student?.nombre || 'el estudiante'}\n\n`;
+    
+    if (pei.summary) {
+      content += `Resumen: ${pei.summary}\n\n`;
+    }
+    
+    if (pei.diagnosis) {
+      content += `Diagnóstico: ${pei.diagnosis}\n\n`;
+    }
+    
+    if (pei.objectives && Array.isArray(pei.objectives)) {
+      content += `Objetivos:\n`;
+      for (const [index, obj] of pei.objectives.entries()) {
+        content += `${index + 1}. ${obj.title || obj}\n`;
+      }
+      content += '\n';
+    }
+    
+    if (pei.adaptations && Array.isArray(pei.adaptations)) {
+      content += `Adaptaciones:\n`;
+      for (const [index, adapt] of pei.adaptations.entries()) {
+        content += `${index + 1}. ${adapt.description || adapt}\n`;
+      }
+    }
+    
+    return content;
+  }
+
+  /**
+   * Estimate audio duration
+   */
+  private estimateAudioDuration(content: string): number {
+    // Estimation: ~150 words per minute
+    const words = content.split(' ').length;
+    return Math.ceil((words / 150) * 60);
   }
 }

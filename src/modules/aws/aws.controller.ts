@@ -17,6 +17,8 @@ import {
   AwsS3Service,
   AwsPollyService,
 } from './services';
+import { AwsElevenlabsService } from './services/aws-elevenlabs.service';
+import { AwsN8nService } from './services/aws-n8n.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -32,6 +34,8 @@ export class AwsController {
     private readonly s3Service: AwsS3Service,
     private readonly pollyService: AwsPollyService,
     private readonly bedrockService: AwsBedrockService,
+    private readonly elevenlabsService: AwsElevenlabsService,
+    private readonly n8nService: AwsN8nService,
   ) {}
 
   // ========================================
@@ -472,5 +476,109 @@ export class AwsController {
       region: process.env.AWS_REGION || 'eu-west-1',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  // ========================================
+  // ELEVENLABS - TEXT TO SPEECH
+  // ========================================
+
+  @Post('elevenlabs/text-to-speech')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO', 'FAMILIA')
+  @ApiOperation({
+    summary: '🔊 Convertir texto a audio con ElevenLabs',
+    description: 'Convierte texto a audio de alta calidad usando ElevenLabs',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        text: 'Este es el PEI de María García...',
+        voiceId: 'pNInz6obpgDQGcFmaJgB',
+        options: {
+          stability: 0.5,
+          similarityBoost: 0.5,
+        },
+      },
+    },
+  })
+  async textToSpeech(@Body() body: {
+    text: string;
+    voiceId?: string;
+    options?: any;
+  }) {
+    return this.elevenlabsService.textToSpeech(
+      body.text,
+      body.voiceId,
+      body.options
+    );
+  }
+
+  @Get('elevenlabs/voices')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO', 'FAMILIA')
+  @ApiOperation({
+    summary: '🎤 Obtener voces disponibles',
+    description: 'Obtiene la lista de voces disponibles en ElevenLabs',
+  })
+  async getAvailableVoices() {
+    return this.elevenlabsService.getAvailableVoices();
+  }
+
+  // ========================================
+  // N8N - WORKFLOW AUTOMATION
+  // ========================================
+
+  @Post('n8n/trigger')
+  @Roles('ADMIN', 'ORIENTADOR')
+  @ApiOperation({
+    summary: '⚡ Ejecutar workflow de N8N',
+    description: 'Ejecuta un workflow de automatización en N8N',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        workflowId: 'notification-workflow',
+        data: {
+          userId: 'clxxxxx',
+          message: 'PEI aprobado',
+        },
+        options: {
+          waitForCompletion: true,
+          timeout: 30000,
+        },
+      },
+    },
+  })
+  async triggerWorkflow(@Body() body: {
+    workflowId: string;
+    data: any;
+    options?: any;
+  }) {
+    return this.n8nService.triggerWorkflow(
+      body.workflowId,
+      body.data,
+      body.options
+    );
+  }
+
+  @Get('n8n/executions')
+  @Roles('ADMIN', 'ORIENTADOR')
+  @ApiOperation({
+    summary: '📊 Obtener historial de ejecuciones',
+    description: 'Obtiene el historial de ejecuciones de workflows de N8N',
+  })
+  async getExecutions(
+    @Param('workflowId') workflowId?: string,
+    @Param('limit') limit: number = 50
+  ) {
+    return this.n8nService.getExecutions(workflowId, limit);
+  }
+
+  @Get('n8n/executions/:executionId')
+  @Roles('ADMIN', 'ORIENTADOR')
+  @ApiOperation({
+    summary: '📈 Estado de ejecución',
+    description: 'Obtiene el estado de una ejecución específica',
+  })
+  async getExecutionStatus(@Param('executionId') executionId: string) {
+    return this.n8nService.getExecutionStatus(executionId);
   }
 }
