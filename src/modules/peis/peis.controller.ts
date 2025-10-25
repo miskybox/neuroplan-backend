@@ -22,31 +22,31 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @ApiTags('peis')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('api/peis')
+@Controller('peis')
 export class PeisController {
   constructor(private readonly peisService: PeisService) {}
 
   @Post('generate-from-diagnosis')
   @Roles('ADMIN', 'ORIENTADOR')
   @ApiOperation({
-    summary: '🧠 Generar PEI desde diagnóstico directo',
+    summary: '🧠 Generate PEI from direct diagnosis',
     description: `
-**Endpoint para el frontend** - Genera un PEI completo desde un diagnóstico directo sin necesidad de subir informe.
+**Frontend endpoint** - Generates a complete PEI from direct diagnosis without needing to upload a report.
 
-**Flujo simplificado:**
-1. 🧠 Recibe datos del diagnóstico directamente
-2. 📋 Genera objetivos SMART personalizados con Claude AI
-3. 🎯 Crea adaptaciones curriculares específicas
-4. 📊 Define plan de evaluación y seguimiento
+**Simplified flow:**
+1. 🧠 Receives diagnosis data directly
+2. 📋 Generates personalized SMART objectives with Claude AI
+3. 🎯 Creates specific curricular adaptations
+4. 📊 Defines evaluation and monitoring plan
 
-**Resultado:** PEI completo en segundos.
+**Result:** Complete PEI in seconds.
 
-**Uso desde frontend:** Este es el endpoint que necesitas para la demo.
+**Frontend usage:** This is the endpoint you need for the demo.
     `,
   })
   @ApiResponse({
     status: 201,
-    description: 'PEI generado correctamente desde diagnóstico',
+    description: 'PEI generated successfully from diagnosis',
     schema: {
       example: {
         id: 'clxxxxx',
@@ -71,7 +71,7 @@ export class PeisController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
   async generatePeiFromDiagnosis(
     @Body() diagnosisData: {
       studentId: string;
@@ -344,5 +344,53 @@ Genera y descarga el PEI en formato PDF oficial para:
     } catch (error: any) {
       throw new NotFoundException(error.message || 'PEI no encontrado');
     }
+  }
+
+  @Get('student/:studentId')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO', 'FAMILIA')
+  @ApiOperation({
+    summary: 'Obtener PEIs de un estudiante específico',
+    description: 'Obtiene todos los PEIs asociados a un estudiante específico',
+  })
+  @ApiParam({
+    name: 'studentId',
+    description: 'ID del estudiante',
+    example: 'clxxxxx',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de PEIs del estudiante',
+  })
+  async getPeisByStudent(@Param('studentId') studentId: string, @CurrentUser() user: any) {
+    return this.peisService.getPeisByStudent(studentId, user.id, user.rol);
+  }
+
+  @Post(':id/audio')
+  @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO', 'FAMILIA')
+  @ApiOperation({
+    summary: '🔊 Generar audio del PEI',
+    description: 'Convierte el PEI a audio usando AWS Polly para accesibilidad',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único del PEI',
+    example: 'clxxxxx',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Audio generado correctamente',
+    schema: {
+      example: {
+        id: 'clxxxxx',
+        url: 'https://s3.amazonaws.com/neuroplan-audio/pei-123.mp3',
+        duration: 180,
+        language: 'es',
+        voice: 'Conchita',
+        createdAt: '2025-10-11T15:00:00.000Z',
+      },
+    },
+  })
+  async generatePeiAudio(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.peisService.generatePeiAudio(id, user.id);
   }
 }

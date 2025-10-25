@@ -10,14 +10,19 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-
 .env.production
-.env.example
+
+# Keep .env.example for reference
+# .env.example
 
 # Build outputs
 dist/
 build/
 *.tsbuildinfo
+
+# Backup folders
+__backup__/
+backup/
 
 # Logs
 logs

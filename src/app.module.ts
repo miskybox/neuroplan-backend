@@ -4,6 +4,8 @@ import { PeisModule } from './modules/peis/peis.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { AwsModule } from './modules/aws/aws.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -25,6 +27,10 @@ import { AppController } from './app.controller';
     
     // Módulo de almacenamiento (AWS S3)
     AwsModule,
+    
+    // Módulos de interfaz
+    DashboardModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [],
