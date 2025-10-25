@@ -33,7 +33,7 @@ export class PeisService {
 
     // 2. Calculate student age
     const today = new Date();
-    const birthDate = new Date(student.birth_date);
+    const birthDate = new Date(student.birthDate);
     const age = today.getFullYear() - birthDate.getFullYear();
 
     // 3. Prepare analysis from direct diagnosis
@@ -42,7 +42,7 @@ export class PeisService {
       symptoms: diagnosisData.symptoms || [],
       strengths: diagnosisData.strengths || [],
       additionalInfo: diagnosisData.additionalNotes || '',
-      studentName: `${student.name} ${student.last_name}`,
+      studentName: `${student.firstName} ${student.lastName}`,
       gradeLevel: student.grade,
       age,
     };
@@ -52,11 +52,11 @@ export class PeisService {
 
     // 5. Crear un report virtual para cumplir con el esquema
     const virtualReportRes = await pool.query(
-      `INSERT INTO report (filename, "originalName", "mimeType", size, path, "extractedText", status, "processedAt", "studentId")
+      `INSERT INTO "Report" (filename, "originalName", "mimeType", size, path, "extractedText", status, "processedAt", "studentId")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [
         `diagnosis-${Date.now()}.json`,
-        `Diagnóstico directo - ${student.nombre} ${student.apellidos}`,
+        `Direct diagnosis - ${student.firstName} ${student.lastName}`,
         'application/json',
         JSON.stringify(diagnosisData).length,
         `/virtual/diagnosis-${Date.now()}.json`,
@@ -68,9 +68,9 @@ export class PeisService {
     );
     const virtualReport = virtualReportRes.rows[0];
 
-    // 6. Crear PEI en base de datos
+    // 6. Create PEI in database (English fields)
     const peiRes = await pool.query(
-      `INSERT INTO pei (resumen, diagnostico, objetivos, adaptaciones, estrategias, evaluacion, cronograma, estado, "creadoPorId", "studentId", "reportId")
+      `INSERT INTO "PEI" (summary, diagnosis, objectives, adaptations, strategies, evaluation, timeline, status, "createdById", "studentId", "reportId")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [
         peiData.summary,
@@ -80,7 +80,7 @@ export class PeisService {
         JSON.stringify(peiData.strategies),
         JSON.stringify(peiData.evaluation),
         JSON.stringify(peiData.timeline),
-        'BORRADOR',
+        'DRAFT',
         userId,
         diagnosisData.studentId,
         virtualReport.id
@@ -88,9 +88,9 @@ export class PeisService {
     );
     const pei = peiRes.rows[0];
 
-    // 7. Log de actividad
+    // 7. Activity log (English fields)
     await pool.query(
-      `INSERT INTO "activityLog" (accion, entidad, "entidadId", detalles)
+      `INSERT INTO "ActivityLog" (action, entity, "entityId", details)
        VALUES ($1, $2, $3, $4)`,
       [
         'generate_pei_from_diagnosis',
@@ -104,19 +104,19 @@ export class PeisService {
       ]
     );
 
-    // 8. Retornar PEI con datos expandidos
+    // 8. Return PEI with expanded data (English fields)
     return {
       ...pei,
-      objectives: JSON.parse(pei.objetivos),
-      adaptations: JSON.parse(pei.adaptaciones),
-      strategies: JSON.parse(pei.estrategias),
-      evaluation: JSON.parse(pei.evaluacion),
-      timeline: JSON.parse(pei.cronograma),
+      objectives: JSON.parse(pei.objectives),
+      adaptations: JSON.parse(pei.adaptations),
+      strategies: JSON.parse(pei.strategies),
+      evaluation: JSON.parse(pei.evaluation),
+      timeline: JSON.parse(pei.timeline),
       student: {
         id: student.id,
-        name: student.nombre,
-        lastName: student.apellidos,
-        grade: student.curso,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        grade: student.grade,
       },
     };
   }
@@ -127,7 +127,7 @@ export class PeisService {
   async generatePeiFromReport(dto: GeneratePeiFromReportDto, userId: string) {
     // 1. Validar que el informe existe y pertenece al estudiante
     const reportRes = await pool.query(
-      'SELECT * FROM report WHERE id = $1 AND "studentId" = $2',
+      'SELECT * FROM "Report" WHERE id = $1 AND "studentId" = $2',
       [dto.reportId, dto.studentId]
     );
     const report = reportRes.rows[0];
@@ -141,7 +141,7 @@ export class PeisService {
       extractedText = await this.extractTextFromReport(report);
       // Actualizar el informe con el texto extraído
       await pool.query(
-        'UPDATE report SET "extractedText" = $1, status = $2 WHERE id = $3',
+        'UPDATE "Report" SET "extractedText" = $1, status = $2 WHERE id = $3',
         [extractedText, 'PROCESSING', report.id]
       );
     }
@@ -154,7 +154,7 @@ export class PeisService {
 
     // 5. Crear PEI en base de datos
     const peiRes = await pool.query(
-      `INSERT INTO pei (resumen, diagnostico, objetivos, adaptaciones, estrategias, evaluacion, cronograma, estado, "creadoPorId", "studentId", "reportId")
+      `INSERT INTO "PEI" (summary, diagnosis, objectives, adaptations, strategies, evaluation, timeline, status, "createdById", "studentId", "reportId")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [
         peiData.summary,
@@ -164,7 +164,7 @@ export class PeisService {
         JSON.stringify(peiData.strategies),
         JSON.stringify(peiData.evaluation),
         JSON.stringify(peiData.timeline),
-        'BORRADOR',
+        'DRAFT',
         userId,
         dto.studentId,
         dto.reportId
@@ -174,13 +174,13 @@ export class PeisService {
 
     // 6. Marcar informe como completado
     await pool.query(
-      'UPDATE report SET status = $1, "processedAt" = $2 WHERE id = $3',
+      'UPDATE "Report" SET status = $1, "processedAt" = $2 WHERE id = $3',
       ['COMPLETED', new Date(), report.id]
     );
 
     // 7. Log de actividad
     await pool.query(
-      `INSERT INTO "activityLog" (accion, entidad, "entidadId", detalles)
+      `INSERT INTO "ActivityLog" (action, entity, "entityId", details)
        VALUES ($1, $2, $3, $4)`,
       [
         'generate_pei',
@@ -473,20 +473,20 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
    */
   async getAllPeis(userId?: string, userRole?: string) {
     // Si es FAMILIA, filtrar por usuarioFamiliaId
-    if (userRole === 'FAMILIA' && userId) {
-      // Solo devolver PEIs de estudiantes vinculados al usuario
+    if (userRole === 'FAMILY' && userId) {
+      // Only return PEIs for students linked to the user
       const peisRes = await pool.query(
         `SELECT pei.*, student.*, report.*
          FROM pei
          JOIN student ON pei."studentId" = student.id
          JOIN report ON pei."reportId" = report.id
-         WHERE student."usuarioFamiliaId" = $1
+         WHERE student."familyId" = $1
          ORDER BY pei."createdAt" DESC`,
         [userId]
       );
       return peisRes.rows;
     }
-    // Para otros roles, devolver todos los PEIs
+    // For other roles, return all PEIs
     const peisRes = await pool.query(
       `SELECT pei.*, student.*, report.*
        FROM pei
@@ -512,22 +512,22 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
     );
     const pei = peiRes.rows[0];
     if (!pei) {
-      throw new BadRequestException('PEI no encontrado');
+      throw new BadRequestException('PEI not found');
     }
-    // Verificar acceso si es FAMILIA
-    if (userRole === 'FAMILIA' && userId) {
-      if (pei.usuarioramiliaid && pei.usuarioramiliaid !== userId) {
-        throw new BadRequestException('No tienes acceso a este PEI');
+    // Check access if FAMILY
+    if (userRole === 'FAMILY' && userId) {
+      if (pei.familyid && pei.familyid !== userId) {
+        throw new BadRequestException('No access to this PEI');
       }
     }
-    // Parsear campos JSON
+    // Parse JSON fields (English)
     return {
       ...pei,
-      objectives: JSON.parse(pei.objetivos),
-      adaptations: JSON.parse(pei.adaptaciones),
-      strategies: JSON.parse(pei.estrategias),
-      evaluation: JSON.parse(pei.evaluacion),
-      timeline: JSON.parse(pei.cronograma),
+      objectives: JSON.parse(pei.objectives),
+      adaptations: JSON.parse(pei.adaptations),
+      strategies: JSON.parse(pei.strategies),
+      evaluation: JSON.parse(pei.evaluation),
+      timeline: JSON.parse(pei.timeline),
     };
   }
 
@@ -535,18 +535,16 @@ ${analysis.priorityAreas.map((a: string, i: number) => (i + 1) + '. ' + a).join(
    * Actualiza el estado de un PEI
    */
   async updatePeiStatus(id: string, status: string) {
-    const validStatuses = ['BORRADOR', 'REVISION', 'APROBADO', 'ACTIVO', 'ARCHIVADO'];
-    
+    const validStatuses = ['DRAFT', 'REVIEW', 'APPROVED', 'ACTIVE', 'ARCHIVED'];
     if (!validStatuses.includes(status)) {
-      throw new BadRequestException('Estado no válido');
+      throw new BadRequestException('Invalid status');
     }
-
-    // Actualizar estado del PEI
+    // Update PEI status
     await pool.query(
-      'UPDATE pei SET estado = $1, "fechaAprobacion" = $2 WHERE id = $3',
+      'UPDATE pei SET status = $1, "approvedAt" = $2 WHERE id = $3',
       [
         status,
-        status === 'APROBADO' ? new Date() : null,
+        status === 'APPROVED' ? new Date() : null,
         id
       ]
     );

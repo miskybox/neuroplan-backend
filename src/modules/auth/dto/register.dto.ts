@@ -12,11 +12,11 @@ export class RegisterDto {
 
   @IsString({ message: 'El nombre debe ser un texto' })
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
-  nombre: string;
+  firstName: string;
 
   @IsString({ message: 'Los apellidos deben ser un texto' })
   @IsNotEmpty({ message: 'Los apellidos son obligatorios' })
-  apellidos: string;
+  lastName: string;
 
   @IsString({ message: 'El rol debe ser un texto' })
   @IsIn(['ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO'], {

@@ -13,7 +13,7 @@ export class AuthService {
   async register(dto: RegisterDto) {
     // Verificar si el usuario ya existe
     const { rows: existingUsers } = await pool.query(
-      'SELECT * FROM "User" WHERE email = $1',
+      'SELECT * FROM users WHERE email = $1',
       [dto.email]
     );
     if (existingUsers.length > 0) {
@@ -25,8 +25,10 @@ export class AuthService {
 
     // Crear usuario
     const { rows } = await pool.query(
-      `INSERT INTO "User" (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role`,
-      [dto.email, hashedPassword, dto.rol]
+      `INSERT INTO users (email, password, role, first_name, last_name, center_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING id, email, role, first_name, last_name, center_id`,
+      [dto.email, hashedPassword, dto.rol, dto.firstName, dto.lastName, dto.centroId]
     );
     const usuario = rows[0];
 
@@ -35,14 +37,21 @@ export class AuthService {
       sub: usuario.id,
       email: usuario.email,
       rol: usuario.role,
-      centroId: null, // Ajusta si tienes centroId en tu modelo
+      centroId: usuario.center_id,
     };
 
     const accessToken = this.jwtService.sign(payload);
 
     return {
       accessToken,
-      usuario,
+      user: {
+        id: usuario.id,
+        email: usuario.email,
+        role: usuario.role,
+        firstName: usuario.first_name,
+        lastName: usuario.last_name,
+        centerId: usuario.center_id,
+      },
     };
   }
 
@@ -69,24 +78,27 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       rol: user.role,
-      centroId: null, // Adjust if you have centroId in your model
+      centroId: null, // No existe en el esquema actual
     };
 
     const accessToken = this.jwtService.sign(payload);
 
     return {
       accessToken,
-      usuario: {
+      user: {
         id: user.id,
         email: user.email,
-        rol: user.role,
+        role: user.role,
+        firstName: user.nombre,
+        lastName: user.apellidos,
+        centerId: null,
       },
     };
   }
 
   async validateUser(userId: string) {
     const { rows } = await pool.query(
-      'SELECT * FROM "User" WHERE id = $1',
+      'SELECT * FROM users WHERE id = $1',
       [userId]
     );
     const usuario = rows[0];
@@ -98,13 +110,21 @@ export class AuthService {
 
   async getMe(userId: string) {
     const { rows } = await pool.query(
-      'SELECT id, email, role FROM "User" WHERE id = $1',
+      'SELECT id, email, role, first_name, last_name, center_id, active FROM users WHERE id = $1',
       [userId]
     );
     const usuario = rows[0];
     if (!usuario) {
       throw new UnauthorizedException('Usuario no autorizado');
     }
-    return usuario;
+    return {
+      id: usuario.id,
+      email: usuario.email,
+      role: usuario.role,
+      firstName: usuario.first_name,
+      lastName: usuario.last_name,
+      centerId: usuario.center_id,
+      active: usuario.active,
+    };
   }
 }

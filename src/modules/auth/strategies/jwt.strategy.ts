@@ -20,29 +20,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
   async validate(payload: JwtPayload) {
-    // Buscar usuario por id y traer centro
+    // Find user by id using existing schema
     const userRes = await pool.query(
-      'SELECT u.*, c.* FROM usuario u LEFT JOIN centro c ON u."centroId" = c.id WHERE u.id = $1',
+      'SELECT * FROM "User" WHERE id = $1',
       [payload.sub]
     );
-    const usuario = userRes.rows[0];
-    if (!usuario || !usuario.activo) {
-      throw new UnauthorizedException('Usuario no autorizado o inactivo');
+    const user = userRes.rows[0];
+    if (!user?.activo) {
+      throw new UnauthorizedException('User not authorized or inactive');
     }
-    // Retornar el usuario (se adjunta a request.user)
+    // Return the user (attached to request.user)
     return {
-      id: usuario.id,
-      email: usuario.email,
-      nombre: usuario.nombre,
-      apellidos: usuario.apellidos,
-      rol: usuario.rol,
-      centroId: usuario.centroid,
-      centro: usuario.nombre_centro ? {
-        id: usuario.centroid,
-        nombre: usuario.nombre_centro,
-        direccion: usuario.direccion,
-        telefono: usuario.telefono
-      } : null,
+      id: user.id,
+      email: user.email,
+      firstName: user.nombre,
+      lastName: user.apellidos,
+      role: user.role,
+      centerId: null, // No existe en el esquema actual
     };
   }
 }
