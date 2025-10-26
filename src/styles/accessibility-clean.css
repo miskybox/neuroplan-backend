@@ -1,0 +1,337 @@
+/* ============================================
+   SISTEMA DE ACCESIBILIDAD - VERSIÓN LIMPIA
+   ============================================ */
+
+/* Variables CSS personalizadas */
+:root {
+  --accessibility-font-size: 100%;
+  --accessibility-letter-spacing: 0px;
+  --accessibility-line-height: 150%;
+  --accessibility-word-spacing: 0px;
+  --accessibility-contrast: 100%;
+  --accessibility-saturation: 100%;
+  --accessibility-brightness: 100%;
+}
+
+/* Aplicar variables de texto */
+body {
+  font-size: var(--accessibility-font-size);
+  letter-spacing: var(--accessibility-letter-spacing);
+  line-height: var(--accessibility-line-height);
+  word-spacing: var(--accessibility-word-spacing);
+}
+
+/* Aplicar filtros de color solo cuando no hay filtros especiales */
+body:not([class*="accessibility-colorblind-"]):not(.accessibility-monochrome):not(.accessibility-inverted-contrast) {
+  filter: contrast(var(--accessibility-contrast)) 
+          saturate(var(--accessibility-saturation)) 
+          brightness(var(--accessibility-brightness));
+}
+
+/* ============================================
+   CURSORES PERSONALIZADOS
+   ============================================ */
+
+.accessibility-cursor-black * {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="10" fill="black"/></svg>') 16 16, auto !important;
+}
+
+.accessibility-cursor-white * {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="10" fill="white" stroke="black" stroke-width="2"/></svg>') 16 16, auto !important;
+}
+
+/* ============================================
+   GUÍA DE LECTURA
+   ============================================ */
+
+.accessibility-reading-guide::before {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ff6b6b 20%, #ff6b6b 80%, transparent);
+  pointer-events: none;
+  z-index: 9998;
+  animation: reading-guide-pulse 2s ease-in-out infinite;
+}
+
+@keyframes reading-guide-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ============================================
+   ALINEACIÓN DE TEXTO
+   ============================================ */
+
+.accessibility-text-left * { text-align: left !important; }
+.accessibility-text-center * { text-align: center !important; }
+.accessibility-text-right * { text-align: right !important; }
+.accessibility-text-justify * { text-align: justify !important; }
+
+/* ============================================
+   ANIMACIONES Y PARPADEOS
+   ============================================ */
+
+.accessibility-block-flashing *,
+.accessibility-block-flashing *::before,
+.accessibility-block-flashing *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ============================================
+   MODO ENFOQUE
+   ============================================ */
+
+.accessibility-focus-mode *:not(:hover):not(:focus) {
+  opacity: 0.5;
+  filter: blur(2px);
+  transition: opacity 0.3s, filter 0.3s;
+}
+
+.accessibility-focus-mode *:hover,
+.accessibility-focus-mode *:focus {
+  opacity: 1 !important;
+  filter: blur(0) !important;
+}
+
+/* ============================================
+   FUENTES ESPECIALES
+   ============================================ */
+
+.accessibility-dyslexia-font * {
+  font-family: 'Comic Sans MS', 'Trebuchet MS', Arial, sans-serif !important;
+  font-weight: 600 !important;
+}
+
+.accessibility-readable-font * {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}
+
+/* ============================================
+   MODO LECTURA
+   ============================================ */
+
+.accessibility-reading-mode {
+  background: #f5f5f5 !important;
+}
+
+.accessibility-reading-mode nav,
+.accessibility-reading-mode aside,
+.accessibility-reading-mode footer,
+.accessibility-reading-mode header > *:not(h1):not(h2):not(h3) {
+  display: none !important;
+}
+
+/* ============================================
+   OCULTAR IMÁGENES
+   ============================================ */
+
+.accessibility-hide-images img,
+.accessibility-hide-images picture,
+.accessibility-hide-images svg:not(.lucide) {
+  display: none !important;
+}
+
+/* ============================================
+   RESALTADOS
+   ============================================ */
+
+.accessibility-highlight-links a {
+  outline: 3px solid #ffd700 !important;
+  outline-offset: 2px;
+  background: rgba(255, 215, 0, 0.1) !important;
+  text-decoration: underline !important;
+}
+
+.accessibility-highlight-titles h1,
+.accessibility-highlight-titles h2,
+.accessibility-highlight-titles h3,
+.accessibility-highlight-titles h4,
+.accessibility-highlight-titles h5,
+.accessibility-highlight-titles h6 {
+  outline: 3px solid #4CAF50 !important;
+  outline-offset: 2px;
+  background: rgba(76, 175, 80, 0.1) !important;
+  padding: 0.5rem !important;
+}
+
+/* ============================================
+   FILTROS DE BRILLO (SIMPLES)
+   ============================================ */
+
+.accessibility-high-brightness {
+  filter: brightness(130%) !important;
+}
+
+.accessibility-low-brightness {
+  filter: brightness(70%) !important;
+}
+
+/* ============================================
+   FILTROS DE CONTRASTE
+   ============================================ */
+
+.accessibility-high-contrast {
+  filter: contrast(150%) !important;
+}
+
+.accessibility-high-contrast * {
+  font-weight: 600 !important;
+}
+
+.accessibility-light-contrast {
+  background: white !important;
+  color: black !important;
+}
+
+.accessibility-light-contrast * {
+  background: white !important;
+  color: black !important;
+  border-color: black !important;
+}
+
+.accessibility-inverted-contrast {
+  filter: invert(1) !important;
+}
+
+.accessibility-dark-contrast {
+  background: #121212 !important;
+  color: white !important;
+}
+
+.accessibility-dark-contrast * {
+  background: #121212 !important;
+  color: white !important;
+  border-color: white !important;
+}
+
+/* ============================================
+   FILTROS DE COLOR
+   ============================================ */
+
+.accessibility-monochrome {
+  filter: grayscale(100%) !important;
+}
+
+.accessibility-high-saturation {
+  filter: saturate(200%) !important;
+}
+
+.accessibility-low-saturation {
+  filter: saturate(50%) !important;
+}
+
+/* ============================================
+   FILTROS DE DALTONISMO (SIMPLES)
+   ============================================ */
+
+.accessibility-colorblind-deuteranopia {
+  filter: contrast(1.2) sepia(0.1) hue-rotate(10deg) !important;
+}
+
+.accessibility-colorblind-deuteranomalía {
+  filter: contrast(1.1) sepia(0.05) hue-rotate(5deg) !important;
+}
+
+.accessibility-colorblind-protanopia {
+  filter: contrast(1.2) sepia(0.15) hue-rotate(-10deg) !important;
+}
+
+.accessibility-colorblind-tritanopia {
+  filter: contrast(1.15) hue-rotate(180deg) saturate(0.8) !important;
+}
+
+.accessibility-colorblind-tritanomalía {
+  filter: contrast(1.1) hue-rotate(90deg) saturate(0.9) !important;
+}
+
+.accessibility-colorblind-acromatopsia {
+  filter: grayscale(100%) contrast(1.2) !important;
+}
+
+/* ============================================
+   LUPA (CONTROLADA)
+   ============================================ */
+
+.accessibility-magnifier p:hover,
+.accessibility-magnifier span:hover,
+.accessibility-magnifier a:hover,
+.accessibility-magnifier button:not([aria-label*="Abrir panel"]):hover,
+.accessibility-magnifier li:hover,
+.accessibility-magnifier h1:hover,
+.accessibility-magnifier h2:hover,
+.accessibility-magnifier h3:hover {
+  transform: scale(1.2) !important;
+  z-index: 100;
+  position: relative;
+  background: white;
+  padding: 0.25rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+
+/* ============================================
+   PROTECCIÓN DE CONTROLES
+   ============================================ */
+
+/* Excluir controles de accesibilidad de TODOS los efectos */
+button[aria-label="Abrir panel de accesibilidad"],
+button[aria-label="Abrir panel de accesibilidad"] *,
+.accessibility-panel,
+.accessibility-panel *,
+[role="dialog"],
+[role="dialog"] * {
+  filter: none !important;
+  backdrop-filter: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+  animation: none !important;
+}
+
+/* Forzar botón flotante (MÁXIMA PRIORIDAD) */
+button[aria-label="Abrir panel de accesibilidad"] {
+  position: fixed !important;
+  bottom: 1.5rem !important;
+  right: 1.5rem !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}
+
+/* Asegurar que el botón no se vea afectado por lupa */
+.accessibility-magnifier button[aria-label="Abrir panel de accesibilidad"]:hover {
+  transform: none !important;
+  scale: 1 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ============================================
+   PROTECCIÓN ADICIONAL PARA BOTÓN CON PORTAL
+   ============================================ */
+
+/* Proteger el botón renderizado con Portal */
+.accessibility-trigger-button {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* Asegurar visibilidad del botón sobre cualquier filtro */
+body .accessibility-trigger-button {
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Proteger del efecto lupa */
+.accessibility-magnifier .accessibility-trigger-button:hover {
+  transform: none !important;
+  scale: 1 !important;
+}

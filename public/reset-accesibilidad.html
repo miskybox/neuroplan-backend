@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🆘 Reset de Emergencia - Accesibilidad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+        }
+        .alert {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #c0392b;
+            transform: scale(1.02);
+        }
+        button.secondary {
+            background: #3498db;
+        }
+        button.secondary:hover {
+            background: #2980b9;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🆘 Reset de Emergencia</h1>
+        <h2>Panel de Accesibilidad NeuroPlan</h2>
+
+        <div class="alert">
+            <strong>⚠️ ¿Quedaste atascado con la lupa u otra función?</strong><br>
+            Esta página te ayudará a restablecer todas las configuraciones de accesibilidad.
+        </div>
+
+        <div id="successMessage" class="success">
+            <strong>✅ ¡Éxito!</strong><br>
+            Todas las configuraciones han sido eliminadas. Recarga la página de NeuroPlan.
+        </div>
+
+        <h3>🔧 Soluciones Rápidas:</h3>
+
+        <button onclick="fullReset()">
+            🔄 RESET COMPLETO (Recomendado)
+        </button>
+
+        <button onclick="removeMagnifier()" class="secondary">
+            🔍 Desactivar Solo la Lupa
+        </button>
+
+        <button onclick="removeFilters()" class="secondary">
+            🎨 Quitar Filtros de Daltonismo
+        </button>
+
+        <button onclick="showCurrentSettings()" class="secondary">
+            📊 Ver Configuración Actual
+        </button>
+
+        <div class="info">
+            <strong>💡 Instrucciones:</strong>
+            <ol>
+                <li>Haz clic en el botón de acción que necesites</li>
+                <li>Si usaste "RESET COMPLETO", recarga la página de NeuroPlan</li>
+                <li>Si el problema persiste, usa la consola manual (ver abajo)</li>
+            </ol>
+        </div>
+
+        <h3>🛠️ Solución Manual (Consola del Navegador):</h3>
+        
+        <div class="info">
+            <strong>Paso 1:</strong> Presiona <kbd>F12</kbd> para abrir DevTools<br>
+            <strong>Paso 2:</strong> Ve a la pestaña <strong>Console</strong><br>
+            <strong>Paso 3:</strong> Copia y pega este código:
+        </div>
+
+        <pre><code>// Limpiar clases de accesibilidad
+document.body.className = document.body.className
+  .split(' ')
+  .filter(c => !c.startsWith('accessibility-'))
+  .join(' ');
+
+// Limpiar localStorage
+localStorage.removeItem('accessibilitySettings');
+
+// Recargar
+location.reload();</code></pre>
+
+        <h3>📱 Configuración Actual:</h3>
+        <pre id="currentSettings">Cargando...</pre>
+
+        <div class="info">
+            <strong>🔗 Enlaces Útiles:</strong><br>
+            <a href="http://localhost:8080" target="_blank">🏠 Volver a NeuroPlan</a> |
+            <a href="http://localhost:8080/dashboard" target="_blank">📊 Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        // Función para reset completo
+        function fullReset() {
+            try {
+                // Limpiar localStorage
+                localStorage.removeItem('accessibilitySettings');
+                
+                // Si estamos en la misma página, limpiar clases
+                if (window.location.hostname === 'localhost') {
+                    document.body.className = document.body.className
+                        .split(' ')
+                        .filter(c => !c.startsWith('accessibility-'))
+                        .join(' ');
+                }
+                
+                // Mostrar mensaje de éxito
+                document.getElementById('successMessage').style.display = 'block';
+                
+                // Actualizar vista de configuración
+                setTimeout(() => {
+                    showCurrentSettings();
+                    alert('✅ Reset completo exitoso!\n\n🔄 Ahora recarga la página de NeuroPlan (F5)');
+                }, 500);
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Función para quitar solo la lupa
+        function removeMagnifier() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('accessibilitySettings') || '{}');
+                settings.magnifier = false;
+                localStorage.setItem('accessibilitySettings', JSON.stringify(settings));
+                
+                if (window.location.hostname === 'localhost') {
+                    document.body.classList.remove('accessibility-magnifier');
+                }
+                
+                alert('✅ Lupa desactivada!\n\n🔄 Recarga la página de NeuroPlan');
+                showCurrentSettings();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Función para quitar filtros
+        function removeFilters() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('accessibilitySettings') || '{}');
+                settings.activeColorblindProfile = null;
+                settings.monochrome = false;
+                settings.highContrast = false;
+                settings.lightContrast = false;
+                settings.darkContrast = false;
+                settings.invertedContrast = false;
+                localStorage.setItem('accessibilitySettings', JSON.stringify(settings));
+                
+                alert('✅ Filtros eliminados!\n\n🔄 Recarga la página de NeuroPlan');
+                showCurrentSettings();
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Función para mostrar configuración actual
+        function showCurrentSettings() {
+            try {
+                const settings = localStorage.getItem('accessibilitySettings');
+                const element = document.getElementById('currentSettings');
+                
+                if (!settings) {
+                    element.textContent = '✅ No hay configuraciones guardadas (estado limpio)';
+                } else {
+                    const parsed = JSON.parse(settings);
+                    element.textContent = JSON.stringify(parsed, null, 2);
+                }
+            } catch (error) {
+                document.getElementById('currentSettings').textContent = '❌ Error al leer configuración: ' + error.message;
+            }
+        }
+
+        // Cargar configuración al inicio
+        window.onload = function() {
+            showCurrentSettings();
+        };
+
+        // Tecla de emergencia: Ctrl + Alt + R
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.altKey && e.key === 'r') {
+                if (confirm('🆘 ¿Ejecutar RESET COMPLETO de accesibilidad?')) {
+                    fullReset();
+                }
+            }
+        });
+    </script>
+
+    <div style="text-align: center; margin-top: 30px; opacity: 0.7;">
+        <small>NeuroPlan Hackathon 2025 - Reset de Emergencia v1.0</small>
+    </div>
+</body>
+</html>
