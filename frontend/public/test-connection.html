@@ -294,14 +294,14 @@
         }
         
         function initializeTests() {
-            Object.keys(tests).forEach(category => {
+            for (const category of Object.keys(tests)) {
                 const container = document.getElementById(`${category}Tests`);
                 if (container) {
-                    tests[category].forEach(test => {
+                    for (const test of tests[category]) {
                         container.appendChild(createEndpointElement(test, category));
-                    });
+                    }
                 }
-            });
+            }
         }
         
         async function testEndpoint(test, category, index) {
@@ -415,14 +415,15 @@
                 tests: []
             };
             
-            document.querySelectorAll('.endpoint').forEach(el => {
+            const endpoints = document.querySelectorAll('.endpoint');
+            for (const el of endpoints) {
                 const method = el.querySelector('.method').textContent;
                 const url = el.querySelector('.url').textContent;
                 const status = el.querySelector('.status').textContent;
                 const response = el.querySelector('.response').textContent;
                 
                 results.tests.push({ method, url, status, response });
-            });
+            }
             
             const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);

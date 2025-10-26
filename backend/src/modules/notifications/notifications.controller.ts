@@ -65,7 +65,19 @@ export class NotificationsController {
     },
     @CurrentUser() user: any,
   ) {
-    return this.notificationsService.sendNotification(notificationData, user.id);
+    // El servicio solo acepta un userId, así que enviamos una notificación por cada destinatario
+    const results = await Promise.all(
+      notificationData.userIds.map(userId =>
+        this.notificationsService.sendNotification({
+          userId,
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message,
+          senderId: user.id,
+        })
+      )
+    );
+    return { success: true, sent: results.length };
   }
 
   @Post(':id/mark-read')

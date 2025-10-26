@@ -3,7 +3,7 @@ import axios from 'axios';
 // Configuración base de axios
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
-  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
+  timeout: Number.parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -38,7 +38,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expirado o inválido
       localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      globalThis.location.href = '/login';
     }
     let errorMessage = 'Unknown error';
     if (error instanceof Error) {

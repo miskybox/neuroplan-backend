@@ -1,26 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import pool from '../../db';
+import { supabase } from '../../db';
 
 @Injectable()
 export class NotificationsService {
   async getUserNotifications(userId: string) {
     try {
-      const query = `
-        SELECT 
-          id,
-          type,
-          title,
-          message,
-          read,
-          created_at as "createdAt"
-        FROM "Notification" 
-        WHERE "userId" = $1 
-        ORDER BY created_at DESC
-        LIMIT 50
-      `;
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-      const result = await pool.query(query, [userId]);
-      return result.rows;
+      if (error) {
+        console.error('Error getting user notifications:', error);
+        return [];
+      }
+
+      return data || [];
     } catch (error) {
       console.error('Error getting user notifications:', error);
       return [];
@@ -28,86 +25,118 @@ export class NotificationsService {
   }
 
   async sendNotification(notificationData: {
-    userIds: string[];
+    userId: string;
     type: string;
     title: string;
     message: string;
-  }, senderId: string) {
+    senderId?: string;
+  }) {
     try {
-      const notifications = notificationData.userIds.map(userId => ({
-        userId,
-        type: notificationData.type,
-        title: notificationData.title,
-        message: notificationData.message,
-        senderId,
-        read: false,
-      }));
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: notificationData.userId,
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message,
+          sender_id: notificationData.senderId,
+          read: false,
+        })
+        .select()
+        .single();
 
-      const values = notifications.map((_, index) => {
-        const offset = index * 5;
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`;
-      }).join(', ');
+      if (error) {
+        console.error('Error sending notification:', error);
+        throw error;
+      }
 
-      const query = `
-        INSERT INTO "Notification" ("userId", type, title, message, "senderId", read)
-        VALUES ${values}
-        RETURNING id
-      `;
-
-      const flatValues = notifications.flatMap(n => [
-        n.userId, n.type, n.title, n.message, n.senderId, n.read
-      ]);
-
-      const result = await pool.query(query, flatValues);
-      return {
-        success: true,
-        notificationsCreated: result.rows.length,
-        ids: result.rows.map(row => row.id),
-      };
+      return data;
     } catch (error) {
       console.error('Error sending notification:', error);
-      throw new Error('Error al enviar notificación');
+      throw error;
     }
   }
 
   async markAsRead(notificationId: string, userId: string) {
     try {
-      const query = `
-        UPDATE "Notification" 
-        SET read = true 
-        WHERE id = $1 AND "userId" = $2
-        RETURNING id
-      `;
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId)
+        .eq('user_id', userId)
+        .select()
+        .single();
 
-      const result = await pool.query(query, [notificationId, userId]);
-      
-      if (result.rows.length === 0) {
-        throw new Error('Notificación no encontrada');
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        throw error;
       }
 
-      return {
-        success: true,
-        id: result.rows[0].id,
-      };
+      return data;
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      throw new Error('Error al marcar notificación como leída');
+      throw error;
     }
   }
 
-  async createNotification(userId: string, type: string, title: string, message: string, senderId?: string) {
+  async markAllAsRead(userId: string) {
     try {
-      const query = `
-        INSERT INTO "Notification" ("userId", type, title, message, "senderId", read)
-        VALUES ($1, $2, $3, $4, $5, false)
-        RETURNING id
-      `;
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('read', false)
+        .select();
 
-      const result = await pool.query(query, [userId, type, title, message, senderId]);
-      return result.rows[0].id;
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+        throw error;
+      }
+
+      return data || [];
     } catch (error) {
-      console.error('Error creating notification:', error);
-      throw new Error('Error al crear notificación');
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  async getUnreadCount(userId: string) {
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('count', { count: 'exact' })
+        .eq('user_id', userId)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error getting unread count:', error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  async deleteNotification(notificationId: string, userId: string) {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error deleting notification:', error);
+        throw error;
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
     }
   }
 }

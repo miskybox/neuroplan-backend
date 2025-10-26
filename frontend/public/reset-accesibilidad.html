@@ -159,7 +159,7 @@ location.reload();</code></pre>
                 localStorage.removeItem('accessibilitySettings');
                 
                 // Si estamos en la misma página, limpiar clases
-                if (window.location.hostname === 'localhost') {
+                if (globalThis.location.hostname === 'localhost') {
                     document.body.className = document.body.className
                         .split(' ')
                         .filter(c => !c.startsWith('accessibility-'))
@@ -186,7 +186,7 @@ location.reload();</code></pre>
                 settings.magnifier = false;
                 localStorage.setItem('accessibilitySettings', JSON.stringify(settings));
                 
-                if (window.location.hostname === 'localhost') {
+                if (globalThis.location.hostname === 'localhost') {
                     document.body.classList.remove('accessibility-magnifier');
                 }
                 
@@ -222,11 +222,11 @@ location.reload();</code></pre>
                 const settings = localStorage.getItem('accessibilitySettings');
                 const element = document.getElementById('currentSettings');
                 
-                if (!settings) {
-                    element.textContent = '✅ No hay configuraciones guardadas (estado limpio)';
-                } else {
+                if (settings) {
                     const parsed = JSON.parse(settings);
                     element.textContent = JSON.stringify(parsed, null, 2);
+                } else {
+                    element.textContent = '✅ No hay configuraciones guardadas (estado limpio)';
                 }
             } catch (error) {
                 document.getElementById('currentSettings').textContent = '❌ Error al leer configuración: ' + error.message;
@@ -234,7 +234,7 @@ location.reload();</code></pre>
         }
 
         // Cargar configuración al inicio
-        window.onload = function() {
+        globalThis.onload = function() {
             showCurrentSettings();
         };
 
