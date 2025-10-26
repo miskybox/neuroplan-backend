@@ -34,6 +34,7 @@
     "form-data": "^4.0.0",
     "helmet": "^8.1.0",
     "multer": "^2.0.0",
+    "neuroplan-mvp": "file:..",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",

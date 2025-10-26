@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PeisModule } from './modules/peis/peis.module';
-import { UploadsModule } from './modules/uploads/uploads.module';
 import { AwsModule } from './modules/aws/aws.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
@@ -24,7 +23,6 @@ import { AppController } from './app.controller';
 
     // Módulos funcionales
     PeisModule,
-    UploadsModule,
     
     // Módulo de almacenamiento (AWS S3)
     AwsModule,
