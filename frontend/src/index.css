@@ -1,0 +1,202 @@
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind base;
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind components;
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Colores base - Azul profundo educativo */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    /* Tarjetas con sombra suave */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Popovers */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primario - Azul confianza */
+    --primary: 222 70% 48%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 222 70% 65%;
+    --primary-dark: 222 70% 35%;
+
+    /* Secundario - Verde crecimiento */
+    --secondary: 160 65% 48%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Acento - Naranja motivación */
+    --accent: 25 95% 58%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Muted - Tonos neutros suaves */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Éxito */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Destructivo */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Bordes e inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 70% 48%;
+
+    --radius: 0.75rem;
+
+    /* Gradientes educativos */
+    --gradient-hero: linear-gradient(135deg, hsl(222 70% 48%) 0%, hsl(222 70% 35%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(25 95% 58%) 0%, hsl(25 95% 48%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(160 65% 48%) 0%, hsl(142 76% 36%) 100%);
+
+    /* Sombras elegantes */
+    --shadow-sm: 0 2px 8px hsl(222 70% 48% / 0.08);
+    --shadow-md: 0 4px 16px hsl(222 70% 48% / 0.12);
+    --shadow-lg: 0 8px 32px hsl(222 70% 48% / 0.16);
+    --shadow-glow: 0 0 32px hsl(222 70% 48% / 0.24);
+
+    /* Animaciones suaves */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 222 70% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 222 70% 48%;
+
+    /* Accesibilidad */
+    --accessibility-bg: 0 0% 98%;
+    --accessibility-panel: 0 0% 100%;
+    --accessibility-hover: 250 70% 95%;
+    --accessibility-active: 250 70% 60%;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 222 70% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 222 70% 70%;
+    --primary-dark: 222 70% 45%;
+
+    --secondary: 160 65% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 25 95% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 222 70% 58%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(222 70% 58%) 0%, hsl(222 70% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 8%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(25 95% 65%) 0%, hsl(25 95% 55%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(160 65% 55%) 0%, hsl(142 76% 45%) 100%);
+
+    --shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 16px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 8px 32px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 32px hsl(222 70% 58% / 0.3);
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 222 70% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 222 70% 58%;
+
+    /* Accesibilidad - Dark Mode */
+    --accessibility-bg: 222.2 84% 6%;
+    --accessibility-panel: 222.2 84% 8%;
+    --accessibility-hover: 250 70% 20%;
+    --accessibility-active: 250 70% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+
+  /* Clases de utilidad personalizadas */
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .shadow-elegant {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-spring {
+    transition: var(--transition-spring);
+  }
+}
