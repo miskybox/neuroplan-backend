@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>PEI – {{student.firstName}} {{student.lastName}}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --accent: #1f4f99;
+      --muted: #555;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji'; margin: 0; color: #111; }
+    header { padding: 24px 24px 0; }
+    .container { padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 24px; color: var(--accent); }
+    h2 { margin: 24px 0 8px; font-size: 18px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    p { margin: 8px 0; line-height: 1.5; }
+    .meta { color: var(--muted); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    ul { margin: 8px 0 8px 18px; }
+    .goal { border-left: 4px solid var(--accent); padding-left: 10px; margin: 12px 0; }
+    footer { padding: 12px 24px 24px; color: var(--muted); font-size: 12px; }
+    .small { font-size: 12px; color: var(--muted); }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Plan Educativo Individual (PEI)</h1>
+    <div class="meta">
+      <span><strong>Alumno/a:</strong> {{student.firstName}} {{student.lastName}}</span> ·
+      <span><strong>Curso:</strong> {{student.grade}}</span> ·
+      <span><strong>Centro:</strong> {{meta.school}}</span>
+    </div>
+    <div class="meta">
+      <span><strong>Generado:</strong> {{meta.generatedAt}}</span> ·
+      <span><strong>Autor/a:</strong> {{meta.author}}</span> ·
+      <span class="tag">v{{meta.version}}</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <h2>1. Perfil del estudiante</h2>
+    <div class="grid">
+      <div class="card">
+        <p><strong>Diagnóstico:</strong> {{student.diagnosis}}</p>
+        <p><strong>Fortalezas:</strong></p>
+        <ul>
+          {{#each student.strengths}}<li>{{this}}</li>{{/each}}
+        </ul>
+      </div>
+      <div class="card">
+        <p><strong>Necesidades:</strong></p>
+        <ul>
+          {{#each student.needs}}<li>{{this}}</li>{{/each}}
+        </ul>
+        <p class="small"><strong>Familia:</strong> {{student.family.contactName}} · {{student.family.contactEmail}} · {{student.family.contactPhone}}</p>
+      </div>
+    </div>
+
+    <h2>2. Evaluación y fuentes</h2>
+    <div class="card">
+      <p>{{assessment.summary}}</p>
+      <p><strong>Fuentes:</strong></p>
+      <ul>
+        {{#each assessment.sources}}<li>{{this}}</li>{{/each}}
+      </ul>
+    </div>
+
+    <h2>3. Objetivos y apoyos</h2>
+    {{#each goals}}
+      <div class="goal">
+        <p><strong>Área:</strong> {{area}}</p>
+        <p><strong>Objetivo:</strong> {{objective}}</p>
+        {{#if baseline}}<p><strong>Línea base:</strong> {{baseline}}</p>{{/if}}
+        <p><strong>Criterios de logro:</strong> {{criteria}}</p>
+        <p><strong>Plazo:</strong> {{timeline}}</p>
+        <p><strong>Actividades:</strong></p>
+        <ul>{{#each activities}}<li>{{this}}</li>{{/each}}</ul>
+        <p><strong>Ajustes/Adaptaciones:</strong></p>
+        <ul>{{#each accommodations}}<li>{{this}}</li>{{/each}}</ul>
+      </div>
+    {{/each}}
+
+    <h2>4. Recursos y apoyos</h2>
+    <div class="grid">
+      <div class="card">
+        <p><strong>En aula:</strong></p>
+        <ul>{{#each supports.inClass}}<li>{{this}}</li>{{/each}}</ul>
+      </div>
+      <div class="card">
+        <p><strong>Fuera de aula:</strong></p>
+        <ul>{{#each supports.outOfClass}}<li>{{this}}</li>{{/each}}</ul>
+      </div>
+      <div class="card">
+        <p><strong>Tecnología:</strong></p>
+        <ul>{{#each supports.technology}}<li>{{this}}</li>{{/each}}</ul>
+      </div>
+      <div class="card">
+        <p><strong>Formación docente:</strong></p>
+        <ul>{{#each supports.staffTraining}}<li>{{this}}</li>{{/each}}</ul>
+      </div>
+    </div>
+
+    <h2>5. Plan de seguimiento</h2>
+    <div class="card">
+      <p><strong>Periodo:</strong> {{plan.startDate}} → {{plan.endDate}}</p>
+      <p><strong>Responsables:</strong> {{#each plan.responsibles}}<span class="tag">{{this}}</span>{{/each}}</p>
+      <p><strong>Seguimiento:</strong></p>
+      <ul>{{#each plan.followUp}}<li>{{this}}</li>{{/each}}</ul>
+    </div>
+  </div>
+
+  <footer>
+    NeuroPlan · PEI generado automáticamente con apoyo de IA · Documento de uso educativo.
+  </footer>
+</body>
+</html>

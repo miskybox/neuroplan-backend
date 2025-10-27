@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PEI",
+  "type": "object",
+  "required": [
+    "student",
+    "assessment",
+    "goals",
+    "supports",
+    "plan"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "default": "1.0.0"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generatedBy": {
+          "type": "string"
+        },
+        "school": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        }
+      }
+    },
+    "student": {
+      "type": "object",
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "birthDate",
+        "grade"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "birthDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "grade": {
+          "type": "string"
+        },
+        "diagnosis": {
+          "type": "string"
+        },
+        "strengths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "family": {
+          "type": "object",
+          "properties": {
+            "contactName": {
+              "type": "string"
+            },
+            "contactEmail": {
+              "type": "string"
+            },
+            "contactPhone": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "area",
+          "objective",
+          "criteria",
+          "timeline"
+        ],
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "objective": {
+            "type": "string"
+          },
+          "baseline": {
+            "type": "string"
+          },
+          "criteria": {
+            "type": "string"
+          },
+          "timeline": {
+            "type": "string"
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accommodations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "supports": {
+      "type": "object",
+      "properties": {
+        "inClass": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outOfClass": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "technology": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "staffTraining": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "required": [
+        "startDate",
+        "endDate",
+        "responsibles",
+        "followUp"
+      ],
+      "properties": {
+        "startDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "responsibles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "followUp": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
