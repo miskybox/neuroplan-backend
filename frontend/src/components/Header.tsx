@@ -32,6 +32,9 @@ export const Header = () => {
                   <Link to="/pei-engine" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
                     PEI Engine
                   </Link>
+                  <Link to="/pdf-analysis" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
+                    Análisis PDF
+                  </Link>
                   <Link to="/perfil" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
                     Perfil
                   </Link>

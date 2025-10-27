@@ -98,6 +98,11 @@ const PEIEngine = () => {
       return;
     }
 
+    if (!user?.id) {
+      toast.error("Usuario no autenticado");
+      return;
+    }
+
     setIsCreatingStudent(true);
     try {
       // Crear estudiante
@@ -105,7 +110,8 @@ const PEIEngine = () => {
         name: studentName,
         dateOfBirth: "2010-01-01", // Por ahora fecha por defecto
         gradeLevel: "Primaria",
-        diagnosis: "TDAH + Dislexia"
+        diagnosis: "TDAH + Dislexia",
+        userId: user.id, // Agregar userId del usuario autenticado
       };
 
       const studentResponse = await studentsService.create(studentData);

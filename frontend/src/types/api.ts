@@ -125,6 +125,7 @@ export interface CreateStudentDTO {
   gradeLevel: string;
   diagnosis?: string;
   notes?: string;
+  userId: string;
 }
 
 export interface GeneratePEIDTO {

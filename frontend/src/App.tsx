@@ -21,6 +21,7 @@ import GeneratePEI from "./pages/GeneratePEI";
 import PEIResult from "./pages/PEIResult";
 import BedrockDemo from "./pages/BedrockDemo";
 import WorkflowDemo from "./pages/WorkflowDemo";
+import PdfAnalysisPage from "./pages/PdfAnalysisPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +36,12 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+                  <BrowserRouter
+                    future={{
+                      v7_startTransition: true,
+                      v7_relativeSplatPath: true,
+                    }}
+                  >
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/registro" element={<Register />} />
@@ -87,6 +93,14 @@ const App = () => {
                 <Route 
                   path="/workflow-demo" 
                   element={<WorkflowDemo />}
+                />
+                <Route 
+                  path="/pdf-analysis" 
+                  element={
+                    <ProtectedRoute>
+                      <PdfAnalysisPage />
+                    </ProtectedRoute>
+                  }
                 />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

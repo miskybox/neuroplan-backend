@@ -12,10 +12,21 @@ import type {
   SearchResourcesDTO,
   TriggerWorkflowDTO,
   ApiResponse,
+  CreateStudentDTO,
 } from '../types/api';
 
 // Students & Reports Service
 export const studentsService = {
+  // Crear estudiante
+  create: (studentData: CreateStudentDTO): Promise<ApiResponse<Student>> => {
+    return api.post('/uploads/students', studentData).then(res => res.data);
+  },
+  
+  // Obtener todos los estudiantes
+  getAll: (): Promise<ApiResponse<Student[]>> => {
+    return api.get('/uploads/students').then(res => res.data);
+  },
+  
   // Subir reporte médico (flujo MVP)
   uploadReport: (student: Student, file: File, context?: string): Promise<ApiResponse<Report>> => {
     const formData = new FormData();
@@ -28,8 +39,6 @@ export const studentsService = {
       },
     }).then(res => res.data);
   },
-  // El resto de funciones de estudiantes se eliminan o se ajustan cuando el backend los soporte
-  // ...existing code...
 };
 
 // PEIs Service
@@ -112,10 +121,10 @@ export const workflowService = {
 
 // Health Check Service
 export const healthService = {
-  // Verificar estado del servidor (endpoint sin prefijo /api)
+  // Verificar estado del servidor (endpoint con prefijo /api)
   check: async (): Promise<ApiResponse<{ status: string; timestamp: string }>> => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
-    const response = await fetch(`${baseUrl}/health`);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+    const response = await fetch(`${baseUrl}/api/health`);
     const data = await response.json();
     return {
       data,
