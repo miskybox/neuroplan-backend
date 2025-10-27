@@ -6,7 +6,6 @@ import type {
   AudioFile,
   ResourceLink,
   WorkflowExecution,
-  CreateStudentDTO,
   GeneratePEIDTO,
   UpdatePEIStatusDTO,
   TextToSpeechDTO,
@@ -17,39 +16,20 @@ import type {
 
 // Students & Reports Service
 export const studentsService = {
-  // Crear estudiante
-  create: (data: CreateStudentDTO): Promise<ApiResponse<Student>> =>
-    api.post('/upload/students', data).then(res => res.data),
-
-  // Listar estudiantes
-  getAll: (): Promise<ApiResponse<Student[]>> =>
-    api.get('/upload/students').then(res => res.data),
-
-  // Obtener estudiante por ID
-  getById: (id: number): Promise<ApiResponse<Student>> =>
-    api.get(`/upload/students/${id}`).then(res => res.data),
-
-  // Subir reporte médico
-  uploadReport: (studentId: number, file: File): Promise<ApiResponse<Report>> => {
+  // Subir reporte médico (flujo MVP)
+  uploadReport: (student: Student, file: File, context?: string): Promise<ApiResponse<Report>> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('studentId', String(studentId)); // Enviar studentId como string en FormData
-    
-    // DEBUG: Verificar FormData
-    console.log('📤 Subiendo reporte con studentId:', studentId, 'tipo:', typeof String(studentId));
-    
-    return api.post(`/upload/reports`, formData, {
+    formData.append('student', JSON.stringify(student));
+    if (context) formData.append('context', context);
+    return api.post(`/api/reports`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     }).then(res => res.data);
   },
-
-  // Descargar reporte
-  downloadReport: (reportId: number): Promise<Blob> =>
-    api.get(`/upload/reports/${reportId}/download`, {
-      responseType: 'blob',
-    }).then(res => res.data),
+  // El resto de funciones de estudiantes se eliminan o se ajustan cuando el backend los soporte
+  // ...existing code...
 };
 
 // PEIs Service
