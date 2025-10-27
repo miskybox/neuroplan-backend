@@ -30,6 +30,7 @@ async function bootstrap(): Promise<void> {
     'http://localhost:8081',
     'http://localhost:5173',
     'http://localhost:3000',
+    'http://localhost:8082',
   ];
   app.enableCors({
     origin: allowedOrigins,

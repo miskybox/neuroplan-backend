@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { supabase } from '../../db';
 
+type AnyObject = Record<string, any>;
+
 @Injectable()
 export class PeisService {
+  /**
+   * Genera un PEI y lo guarda en la tabla `public.peis`
+   * - Esquema real: id, user_id, student_id, pei(jsonb), pdf_key, created_at, updated_at
+   * - Guardamos TODO el contenido dentro de `pei` (jsonb)
+   */
   async generatePEI(diagnosisData: {
     studentId: string;
-    reportId?: string;
+    reportId?: string;       // opcional: puedes guardarlo dentro de pei.meta
     diagnosis: string;
     objectives: any[];
     adaptations: any[];
@@ -14,50 +21,75 @@ export class PeisService {
     timeline: any[];
   }) {
     try {
-      // Obtener información del estudiante
+      // 1) Obtener info del estudiante (ajusta nombres de columnas a tu tabla `students`)
       const { data: student, error: studentError } = await supabase
         .from('students')
         .select('*')
         .eq('id', diagnosisData.studentId)
         .single();
 
-      if (studentError) {
+      if (studentError || !student) {
         console.error('Error getting student:', studentError);
         throw new Error('Estudiante no encontrado');
       }
 
-      // Crear PEI
-      const { data: pei, error: peiError } = await supabase
+      // 2) Construir payload JSONB que se guardará en `pei`
+      const peiPayload: AnyObject = {
+        student: {
+          id: diagnosisData.studentId,
+          firstName: student.first_name ?? '',
+          lastName:  student.last_name  ?? '',
+          grade:     student.grade      ?? null,
+        },
+        diagnosis:     diagnosisData.diagnosis,
+        objectives:    diagnosisData.objectives || [],
+        adaptations:   diagnosisData.adaptations || [],
+        strategies:    diagnosisData.strategies || [],
+        evaluation:    diagnosisData.evaluation || [],
+        timeline:      diagnosisData.timeline || [],
+        meta: {
+          generatedAt: new Date().toISOString(),
+          reportId: diagnosisData.reportId ?? null,
+          // guarda otros metadatos aquí si lo necesitas
+        },
+        // campos opcionales que te pueden venir bien para vistas
+        summary: `Plan Educativo Individualizado para ${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
+        title:   `PEI - ${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
+        status: 'DRAFT',
+      };
+
+      // 3) Determinar el usuario creador
+      //    Si en tu flujo el usuario autenticado llega por middleware, puedes pasarlo por parámetro
+      //    Aquí reciclo el 'created_by' del student si existe; si no, 'anon'
+      const userId = student.created_by ?? 'anon';
+
+      // 4) Insertar en la tabla `peis`
+      const { data, error } = await supabase
         .from('peis')
         .insert({
-          student_id: diagnosisData.studentId,
-          report_id: diagnosisData.reportId,
-          title: `PEI - ${student.first_name} ${student.last_name}`,
-          summary: `Plan Educativo Individualizado para ${student.first_name} ${student.last_name}`,
-          diagnosis: diagnosisData.diagnosis,
-          objectives: diagnosisData.objectives,
-          adaptations: diagnosisData.adaptations,
-          strategies: diagnosisData.strategies,
-          evaluation: diagnosisData.evaluation,
-          timeline: diagnosisData.timeline,
-          status: 'DRAFT',
-          created_by: student.created_by, // Usar el creador del estudiante
+          user_id: userId,                          // quién crea el PEI
+          student_id: diagnosisData.studentId,      // estudiante asociado
+          pei: peiPayload,                          // JSONB completo
+          // pdf_key: null                           // lo rellenarás cuando subas el PDF a Storage
         })
         .select()
         .single();
 
-      if (peiError) {
-        console.error('Error creating PEI:', peiError);
-        throw peiError;
+      if (error) {
+        console.error('Error inserting PEI:', error);
+        throw error;
       }
 
-      return pei;
+      return data;
     } catch (error) {
       console.error('Error generating PEI:', error);
       throw error;
     }
   }
 
+  /**
+   * Devuelve todos los PEIs de un estudiante (ordenados por fecha)
+   */
   async getPEIsByStudent(studentId: string) {
     try {
       const { data, error } = await supabase
@@ -67,17 +99,19 @@ export class PeisService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error getting PEIs:', error);
+        console.error('Error getting PEIs by student:', error);
         return [];
       }
-
       return data || [];
     } catch (error) {
-      console.error('Error getting PEIs:', error);
+      console.error('Error getting PEIs by student:', error);
       return [];
     }
   }
 
+  /**
+   * Devuelve un PEI por ID
+   */
   async getPEIById(peiId: string) {
     try {
       const { data, error } = await supabase
@@ -90,7 +124,6 @@ export class PeisService {
         console.error('Error getting PEI:', error);
         return null;
       }
-
       return data;
     } catch (error) {
       console.error('Error getting PEI:', error);
@@ -98,11 +131,30 @@ export class PeisService {
     }
   }
 
-  async updatePEI(peiId: string, updates: any) {
+  /**
+   * Actualiza (parcialmente) un PEI
+   * - Puedes actualizar `pei` completo o campos concretos dentro de ese JSON (desde el front)
+   * - Para MVP, asumimos que nos envías un objeto con la nueva estructura del JSON
+   */
+  async updatePEI(peiId: string, updates: AnyObject) {
     try {
+      // Si te envían `status` o similares de nivel raíz (no existe columna),
+      // muévelos dentro de `pei`:
+      const row = await this.getPEIById(peiId);
+      if (!row) throw new Error('PEI no encontrado');
+
+      const newPei = {
+        ...row.pei,
+        ...(updates?.pei || updates), // si te pasan `pei: {...}` o directamente campos a fusionar
+        meta: {
+          ...row.pei?.meta,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
       const { data, error } = await supabase
         .from('peis')
-        .update(updates)
+        .update({ pei: newPei })
         .eq('id', peiId)
         .select()
         .single();
@@ -111,7 +163,6 @@ export class PeisService {
         console.error('Error updating PEI:', error);
         throw error;
       }
-
       return data;
     } catch (error) {
       console.error('Error updating PEI:', error);
@@ -119,6 +170,9 @@ export class PeisService {
     }
   }
 
+  /**
+   * Elimina un PEI
+   */
   async deletePEI(peiId: string) {
     try {
       const { error } = await supabase
@@ -130,7 +184,6 @@ export class PeisService {
         console.error('Error deleting PEI:', error);
         throw error;
       }
-
       return { success: true };
     } catch (error) {
       console.error('Error deleting PEI:', error);
@@ -138,23 +191,21 @@ export class PeisService {
     }
   }
 
+  /**
+   * Devuelve los PEIs creados por un usuario
+   */
   async getPEIsByUser(userId: string) {
     try {
       const { data, error } = await supabase
         .from('peis')
-        .select(`
-          *,
-          students!peis_student_id_fkey(first_name, last_name),
-          reports!peis_report_id_fkey(filename, original_name)
-        `)
-        .eq('created_by', userId)
+        .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error getting PEIs by user:', error);
         return [];
       }
-
       return data || [];
     } catch (error) {
       console.error('Error getting PEIs by user:', error);
@@ -162,23 +213,31 @@ export class PeisService {
     }
   }
 
+  /**
+   * Búsqueda simple por término dentro de campos típicos del JSON
+   * NOTA: Supabase permite filtrar por paths JSON con la sintaxis `pei->>campo`.
+   * Aquí intento diagnosis/summary. Ajusta si usas otros nombres.
+   */
   async searchPEIs(searchTerm: string, userId: string) {
+    const term = searchTerm?.trim();
+    if (!term) return this.getPEIsByUser(userId);
+
     try {
+      // Importante: esta sintaxis con JSON path funciona en Supabase PostgREST.
+      // Si tienes problemas, puedes hacer dos queries separadas y unir resultados en memoria.
       const { data, error } = await supabase
         .from('peis')
-        .select(`
-          *,
-          students!peis_student_id_fkey(first_name, last_name)
-        `)
-        .eq('created_by', userId)
-        .or(`title.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%,diagnosis.ilike.%${searchTerm}%`)
+        .select('*')
+        .eq('user_id', userId)
+        .or(
+          `pei->>summary.ilike.%${term}%,pei->>diagnosis.ilike.%${term}%`
+        )
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error searching PEIs:', error);
         return [];
       }
-
       return data || [];
     } catch (error) {
       console.error('Error searching PEIs:', error);
@@ -186,119 +245,82 @@ export class PeisService {
     }
   }
 
+  /**
+   * (Mock) Genera "audio" de un PEI y lo registra en tabla auxiliar
+   * Si no tienes `audio_files`, puedes simplemente devolver un objeto mock.
+   */
   async generatePeiAudio(peiId: string, userId: string) {
-    try {
-      // Obtener el PEI
-      const pei = await this.getPEIById(peiId);
-      if (!pei) {
-        throw new Error('PEI no encontrado');
-      }
+    const pei = await this.getPEIById(peiId);
+    if (!pei) throw new Error('PEI no encontrado');
 
-      // Simular generación de audio (en modo mock)
-      const audioData = {
-        pei_id: peiId,
-        url: `https://mock-audio-url.com/pei-${peiId}.mp3`,
-        duration: 300, // 5 minutos
-        language: 'es',
-        voice: 'es-ES-Standard-A',
-      };
-
-      const { data, error } = await supabase
-        .from('audio_files')
-        .insert(audioData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating audio file:', error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error generating PEI audio:', error);
-      throw error;
-    }
+    // Simulación sencilla para MVP
+    return {
+      pei_id: peiId,
+      url: `https://mock-audio-url.com/pei-${peiId}.mp3`,
+      duration: 300,
+      language: 'es',
+      voice: 'es-ES-Standard-A',
+      created_at: new Date().toISOString(),
+      created_by: userId,
+    };
   }
 
+  /**
+   * (Mock) Devuelve "audios" asociados. Si no tienes tabla real, devuelve []
+   */
   async getPeiAudio(peiId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('audio_files')
-        .select('*')
-        .eq('pei_id', peiId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error getting PEI audio:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Error getting PEI audio:', error);
-      return [];
-    }
+    // Para MVP sin tabla real:
+    return [];
   }
 
+  /**
+   * (Mock) Exporta un PEI a fichero y devuelve URL (para MVP)
+   * En producción, usar RenderService + Storage (Supabase o S3)
+   */
   async exportPEI(peiId: string, format: string = 'pdf') {
-    try {
-      const pei = await this.getPEIById(peiId);
-      if (!pei) {
-        throw new Error('PEI no encontrado');
-      }
+    const pei = await this.getPEIById(peiId);
+    if (!pei) throw new Error('PEI no encontrado');
 
-      // Simular exportación (en modo mock)
-      const exportData = {
-        peiId,
-        format,
-        downloadUrl: `https://mock-export-url.com/pei-${peiId}.${format}`,
-        generatedAt: new Date().toISOString(),
-      };
-
-      return exportData;
-    } catch (error) {
-      console.error('Error exporting PEI:', error);
-      throw error;
-    }
+    return {
+      peiId,
+      format,
+      downloadUrl: `https://mock-export-url.com/pei-${peiId}.${format}`,
+      generatedAt: new Date().toISOString(),
+    };
   }
 
+  /**
+   * Duplica un PEI (crea nueva fila con el JSON actualizado)
+   */
   async duplicatePEI(peiId: string, userId: string) {
-    try {
-      const originalPei = await this.getPEIById(peiId);
-      if (!originalPei) {
-        throw new Error('PEI no encontrado');
-      }
+    const original = await this.getPEIById(peiId);
+    if (!original) throw new Error('PEI no encontrado');
 
-      // Crear copia del PEI
-      const { data, error } = await supabase
-        .from('peis')
-        .insert({
-          student_id: originalPei.student_id,
-          report_id: originalPei.report_id,
-          title: `${originalPei.title} (Copia)`,
-          summary: originalPei.summary,
-          diagnosis: originalPei.diagnosis,
-          objectives: originalPei.objectives,
-          adaptations: originalPei.adaptations,
-          strategies: originalPei.strategies,
-          evaluation: originalPei.evaluation,
-          timeline: originalPei.timeline,
-          status: 'DRAFT',
-          created_by: userId,
-        })
-        .select()
-        .single();
+    const newPeiJson = {
+      ...original.pei,
+      title: `${original.pei?.title ?? 'PEI'} (Copia)`,
+      meta: {
+        ...original.pei?.meta,
+        duplicatedFrom: peiId,
+        duplicatedAt: new Date().toISOString(),
+      },
+      status: 'DRAFT',
+    };
 
-      if (error) {
-        console.error('Error duplicating PEI:', error);
-        throw error;
-      }
+    const { data, error } = await supabase
+      .from('peis')
+      .insert({
+        user_id: userId,
+        student_id: original.student_id,
+        pei: newPeiJson,
+      })
+      .select()
+      .single();
 
-      return data;
-    } catch (error) {
+    if (error) {
       console.error('Error duplicating PEI:', error);
       throw error;
     }
+    return data;
   }
 }

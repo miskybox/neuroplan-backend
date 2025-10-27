@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res, UploadedFile, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Post, Res, UploadedFile, BadRequestException, UseInterceptors, Get } from '@nestjs/common';
 import { Response } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -7,7 +7,7 @@ import { LlmService } from '../llm/llm.service';
 import { RenderService } from '../render/render.service';
 import { assertValidPei } from './pei.validate';
 
-@Controller('api')
+@Controller()
 export class PeiController {
   constructor(
     private readonly supa: SupabaseService,
@@ -16,7 +16,7 @@ export class PeiController {
     private readonly renderer: RenderService,
   ) {}
 
-  @Post('reports')
+  @Post('api/reports')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: Number(process.env.MAX_FILE_SIZE || 10_485_760) } }))
   async uploadReport(
     @UploadedFile() file: Express.Multer.File,
@@ -49,13 +49,55 @@ export class PeiController {
     assertValidPei(pei);
 
     // 5) Render → PDF y subir a Supabase
-    const { pdfUrl, key: peiKey } = await this.renderer.uploadPdfToSupabase(student?.id || 'anon', await this.renderer.renderHtml(pei).then(html => this.renderer.htmlToPdfBuffer(html)));
+    const { pdfUrl, key: peiKey } = await this.renderer.uploadPdfToSupabase(
+      student?.id || 'anon',
+      await this.renderer.renderHtml(pei).then(html => this.renderer.htmlToPdfBuffer(html))
+    );
 
     return {
       report: { key, signedUrl: signed.signedUrl },
       pei,
       peiPdf: { key: peiKey, pdfUrl }
     };
+  }
+
+  // Alias para compatibilidad con frontend alternativo
+  @Post('uploads/pdf-analysis')
+  @UseInterceptors(FileInterceptor('pdf', { limits: { fileSize: Number(process.env.MAX_FILE_SIZE || 10_485_760) } }))
+  async uploadPdfAnalysis(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+  ) {
+    if (!file) throw new BadRequestException('Falta archivo PDF');
+    if (file.mimetype !== 'application/pdf') throw new BadRequestException('Solo PDF');
+
+    // Extraer texto
+    const text = await this.extractor.fromPdfBuffer(file.buffer);
+    // LLM → análisis
+    const analysis = await this.llm.peiFromText({}, text, body?.context || '');
+    // Render PDF editable
+    const html = await this.renderer.renderHtml(analysis);
+    const pdfBuffer = await this.renderer.htmlToPdfBuffer(html);
+    // Opcional: subir a Supabase
+    // const { pdfUrl } = await this.renderer.uploadPdfToSupabase('anon', pdfBuffer);
+
+    // Devolver análisis y PDF en base64
+    return {
+      success: true,
+      data: {
+        analysis,
+        reportPdf: {
+          base64: pdfBuffer.toString('base64'),
+          filename: 'informe.pdf',
+        },
+      },
+    };
+  }
+
+  // Endpoint /health
+  @Get('health')
+  health() {
+    return { status: 'ok', message: 'Servidor funcionando correctamente' };
   }
 
   // 1) PREVIEW: devuelve HTML (para iframe/srcDoc)

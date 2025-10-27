@@ -8,6 +8,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { AppController } from './app.controller';
+import { StudentsModule } from './modules/students/students.module';
 
 @Module({
   imports: [
@@ -31,12 +32,15 @@ import { AppController } from './app.controller';
     // Módulo de almacenamiento (AWS S3)
     AwsModule,
     
-    // Módulos de interfaz
-    DashboardModule,
-    NotificationsModule,
-    
-    // Base de datos
-    SupabaseModule,
+  // Módulos de interfaz
+  DashboardModule,
+  NotificationsModule,
+
+  // Módulo de estudiantes
+  StudentsModule,
+
+  // Base de datos
+  SupabaseModule,
   ],
   controllers: [AppController],
   providers: [],
