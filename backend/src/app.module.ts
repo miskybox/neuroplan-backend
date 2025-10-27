@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -23,6 +24,9 @@ import { AppController } from './app.controller';
 
     // Módulos funcionales
     PeisModule,
+    
+    // Módulo de uploads y gestión de archivos
+    UploadsModule,
     
     // Módulo de almacenamiento (AWS S3)
     AwsModule,
