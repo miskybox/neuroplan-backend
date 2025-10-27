@@ -10,5 +10,7 @@ export class SupabaseService {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
   }
-  get() { return this.client; }
+  public get(): SupabaseClient {
+    return this.client;
+  }
 }

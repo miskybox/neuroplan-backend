@@ -1,6 +1,7 @@
-import { Controller, Post, UseInterceptors, UploadedFile, Body, BadRequestException } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Post, Res, UploadedFile, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { Response } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ExtractService } from '../extract/extract.service';
 import { LlmService } from '../llm/llm.service';
 import { RenderService } from '../render/render.service';
@@ -48,7 +49,7 @@ export class PeiController {
     assertValidPei(pei);
 
     // 5) Render → PDF y subir a Supabase
-    const { pdfUrl, key: peiKey } = await this.renderer.renderAndUpload(student?.id || 'anon', pei);
+    const { pdfUrl, key: peiKey } = await this.renderer.uploadPdfToSupabase(student?.id || 'anon', await this.renderer.renderHtml(pei).then(html => this.renderer.htmlToPdfBuffer(html)));
 
     return {
       report: { key, signedUrl: signed.signedUrl },
@@ -56,4 +57,36 @@ export class PeiController {
       peiPdf: { key: peiKey, pdfUrl }
     };
   }
+
+  // 1) PREVIEW: devuelve HTML (para iframe/srcDoc)
+  @Post('peis/preview')
+  async preview(@Body() body: { pei: any }, @Res() res: Response) {
+    const pei = body.pei;
+    // assertValidPei(pei); // opcional
+    const html = await this.renderer.renderHtml(pei);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    // Evita que se embeba desde orígenes no permitidos (ajusta según tu front):
+    res.set('X-Frame-Options', 'SAMEORIGIN');
+    return res.status(200).send(html);
+  }
+
+  // 2) PDF: genera y sube a Supabase; devuelve pdfUrl
+  @Post('peis/pdf')
+  async pdf(@Body() body: { pei: any; userId?: string }) {
+    const pei = body.pei;
+    // assertValidPei(pei); // opcional
+    const html = await this.renderer.renderHtml(pei);
+    const buf = await this.renderer.htmlToPdfBuffer(html);
+    const { pdfUrl } = await this.renderer.uploadPdfToSupabase(body.userId || 'anon', buf);
+    return { pdfUrl };
+  }
 }
+
+// Si necesitas registrar errores, puedes crear un archivo backend/error.log y usar un logger en producción.
+// Ejemplo básico de logger con appendFile:
+// import * as fs from 'node:fs/promises';
+// async function logError(message: string) {
+//   await fs.appendFile('backend/error.log', `[${new Date().toISOString()}] ${message}\n`);
+// }
+// Llama a logError(error.message) en tus catch o en los bloques donde quieras registrar errores.
+

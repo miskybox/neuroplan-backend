@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <title>PEI – {{student.lastName}}, {{student.firstName}}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    h1,h2 { margin: 0 0 8px; }
+    .meta { color:#666; font-size: 12px; margin-bottom: 16px; }
+    .section { margin: 18px 0; }
+    .card { border:1px solid #eee; border-radius:12px; padding:16px; margin:12px 0; }
+    ul { margin: 6px 0 6px 18px; }
+  </style>
+</head>
+<body>
+  <h1>Plan Educativo Individual (PEI)</h1>
+  <div class="meta">Alumno/a: <b>{{student.firstName}} {{student.lastName}}</b> · Curso: {{student.grade}}</div>
+
+  <div class="section">
+    <h2>Evaluación</h2>
+    <div class="card">{{assessment.summary}}</div>
+  </div>
+
+  <div class="section">
+    <h2>Objetivos</h2>
+    <div class="card">
+      <ul>
+        {{#each goals}}
+          <li><b>{{this.area}}:</b> {{this.target}} (plazo: {{this.timeline}})</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Apoyos / Ajustes</h2>
+    <div class="card">
+      <ul>
+        {{#each supports}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Plan de intervención</h2>
+    <div class="card">
+      <ul>
+        {{#each plan.actions}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+  <div class="meta">Generado: {{meta.generatedAt}}</div>
+</body>
+</html>
