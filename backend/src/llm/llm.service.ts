@@ -27,20 +27,48 @@ Devuelve SOLO el JSON.`,
       options: { temperature: 0.2 }
     };
 
-    const base = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-    const res = await fetch(`${base}/api/generate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new BadRequestException('Ollama error ' + res.status);
+    const base = process.env.OLLAMA_BASE_URL || process.env.OLLAMA_URL || 'http://localhost:11434';
+    // LOG: prompt y body
+    console.log('[LLM] Prompt enviado a Ollama:', body.prompt);
+    let res;
+    try {
+      res = await fetch(`${base}/api/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch (err) {
+      console.error('[LLM] Error de red al llamar a Ollama:', err);
+      throw new BadRequestException('No se pudo conectar con Ollama');
+    }
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[LLM] Ollama error', res.status, errText);
+      throw new BadRequestException('Ollama error ' + res.status);
+    }
     const { response } = await res.json();
+    // LOG: respuesta cruda
+    console.log('[LLM] Respuesta cruda de Ollama:', response);
 
-    try { return JSON.parse(response); }
-    catch {
+    let parsed;
+    try {
+      parsed = JSON.parse(response);
+    } catch {
       const first = response.indexOf('{');
       const last = response.lastIndexOf('}');
-      if (first >= 0 && last > first) return JSON.parse(response.slice(first, last + 1));
-      throw new BadRequestException('El modelo no devolvió JSON válido');
+      if (first >= 0 && last > first) {
+        parsed = JSON.parse(response.slice(first, last + 1));
+      } else {
+        console.error('[LLM] No se pudo parsear JSON:', response);
+        throw new BadRequestException('El modelo no devolvió JSON válido');
+      }
     }
+    // LOG: JSON parseado
+    console.log('[LLM] JSON parseado:', parsed);
+    // Validar estructura mínima
+    if (!parsed || typeof parsed !== 'object' || !parsed.meta || !parsed.student) {
+      console.error('[LLM] JSON incompleto o inesperado:', parsed);
+      throw new BadRequestException('El modelo devolvió un JSON incompleto o inesperado');
+    }
+    return parsed;
   }
 }

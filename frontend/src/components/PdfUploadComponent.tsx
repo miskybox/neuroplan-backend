@@ -38,7 +38,7 @@ export function PdfUploadComponent() {
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (file && file.type === 'application/pdf') {
+    if (file?.type === 'application/pdf') {
       setSelectedFile(file);
       setAnalysisResult(null);
     }

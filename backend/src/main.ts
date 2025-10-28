@@ -3,85 +3,70 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { testSupabaseConnection } from './db';
 
-// Capturar errores no manejados
+// Manejo de errores globales (NO tumbar el server en prod por cosas recuperables)
 process.on('uncaughtException', (error) => {
   console.error('ERROR NO CAPTURADO:', error);
-  process.exit(1);
 });
-
 process.on('unhandledRejection', (reason, promise) => {
   console.error('PROMESA RECHAZADA NO MANEJADA:', promise, 'razon:', reason);
-  process.exit(1);
 });
 
 async function bootstrap(): Promise<void> {
+  // 1) PROBAR SUPABASE PERO NO BLOQUEAR EL ARRANQUE (salvo modo estricto)
+  const strict = String(process.env.SUPABASE_STRICT || 'false').toLowerCase() === 'true';
+  console.log('🔍 Testing Supabase connection...');
+  const supabaseConnected = await testSupabaseConnection();
+  if (!supabaseConnected) {
+    const msg = '❌ Failed to connect to Supabase. Check your configuration.';
+    if (strict) {
+      console.error(msg);
+      process.exit(1);
+    } else {
+      console.warn(`${msg} (Continuing without Supabase for MVP)`);
+    }
+  }
+
   const app = await NestFactory.create(AppModule);
 
-  // ⭐ PREFIJO GLOBAL - Todas las rutas tendrán /api
+  // 2) Prefijo /api
   app.setGlobalPrefix('api');
 
-  // Seguridad: Helmet para headers HTTP seguros
+  // 3) Seguridad
   app.use(helmet());
 
-  // CORS abierto para todos los puertos locales de desarrollo
-  const allowedOrigins = [
-    'http://localhost:8080',
-    'http://localhost:8081',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:8082',
-  ];
+  // 4) CORS desde env o por defecto a 5173
+  const origins =
+    (process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean)) ||
+    ['http://localhost:5173'];
   app.enableCors({
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: origins,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: false,
   });
 
-  // Pipe global de validación estricta
+  // 5) Validación
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  const port = 3001;
+  // 6) Puerto desde env (fallback 3001)
+  const port = Number(process.env.PORT || 3001);
   await app.listen(port);
 
   console.log('\n==============================================');
   console.log('   NeuroPlan AI Campus - Backend MVP');
   console.log('==============================================');
-  console.log(`\nAPI: http://localhost:${port}/api`);
+  console.log(`API:    http://localhost:${port}/api`);
   console.log(`Health: http://localhost:${port}/api/health`);
-  console.log(`Login: http://localhost:${port}/api/auth/login`);
-  console.log(`Modo: ${process.env.NODE_ENV || 'development'}\n`);
-  console.log('Sistema profesional configurado:');
-  console.log('- Autenticacion JWT');
-  console.log('- Control de acceso por roles (ADMIN, ORIENTADOR, PROFESOR, DIRECTOR_CENTRO, FAMILIA)');
-  console.log('- Multi-tenancy');
-  console.log('- Validacion estricta');
-  console.log('- Headers de seguridad');
-  console.log('- Auditoria de acciones');
-  console.log('- Prefijo global: /api\n');
-
-  // Signal handlers para mantener el proceso vivo
-  process.on('SIGTERM', async () => {
-    console.log('\nRecibida senal SIGTERM - Cerrando servidor..');
-    await app.close();
-    process.exit(0);
-  });
-
-  process.on('SIGINT', async () => {
-    console.log('\n\nRecibida senal SIGINT - Cerrando servidor..');
-    await app.close();
-    process.exit(0);
-  });
+  console.log(`Modo:   ${process.env.NODE_ENV || 'development'}`);
+  console.log(`CORS:   ${origins.join(', ')}`);
 }
 
 (async () => {
