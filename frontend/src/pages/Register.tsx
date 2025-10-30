@@ -26,7 +26,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface FormData {
   // Información personal
@@ -58,13 +58,15 @@ interface FormData {
   privacidad: boolean;
 }
 
-const Register = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { toast } = useToast();
-  
-  const [formData, setFormData] = useState<FormData>({
+  const Register = () => {
+    const [currentStep, setCurrentStep] = useState(1);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+    
+    const [formData, setFormData] = useState<FormData>({
     nombre: "",
     apellidos: "",
     email: "",
@@ -189,33 +191,61 @@ const Register = () => {
     }
   };
 
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+
   const handleSubmit = async () => {
     // Validaciones finales
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden",
-        variant: "destructive",
-      });
+      setFormError("Las contraseñas no coinciden");
+      return;
+    }
+
+    if (!passwordRegex.test(formData.password)) {
+      setFormError("La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, un número y un símbolo.");
       return;
     }
 
     if (!formData.terminos || !formData.privacidad) {
-      toast({
-        title: "Error",
-        description: "Debes aceptar los términos y condiciones",
-        variant: "destructive",
-      });
+      setFormError("Debes aceptar los términos y condiciones");
       return;
     }
 
-    // Aquí iría la lógica para enviar los datos al backend
-    console.log("Datos del formulario:", formData);
-    
-    toast({
-      title: "¡Perfil NeuroAcadémico creado!",
-      description: "Tu perfil ha sido procesado por nuestro PEI Engine. Recibirás un email con los próximos pasos.",
-    });
+    // Preparar datos para el backend (en inglés, solo los requeridos)
+    // Usamos valores por defecto para MVP
+    const userData = {
+      firstName: formData.nombre,
+      lastName: formData.apellidos,
+      email: formData.email,
+      password: formData.password,
+      role: "PROFESOR", // Rol por defecto para MVP
+      centerId: "11111111-1111-1111-1111-111111111111" // Centro demo con UUID válido
+    };
+
+    try {
+      setFormError(null);
+      setFormSuccess(null);
+      const { authService } = await import("@/services/neuroplanApi");
+      const response = await authService.register(userData);
+      const token = (response as any)?.accessToken || (response as any)?.token;
+      if (token) {
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("neuroplan_user", JSON.stringify((response as any).user));
+        setFormSuccess("¡Registro exitoso! Redirigiendo al login...");
+        setTimeout(() => {
+          globalThis.location.href = "/login";
+        }, 1800);
+      } else {
+        setFormError((response as any)?.message || "No se pudo crear la cuenta. Intenta de nuevo.");
+      }
+    } catch (error: any) {
+      let msg = "No se pudo registrar. Intenta de nuevo.";
+      if (error?.response?.data?.message) {
+        msg = error.response.data.message;
+      } else if (error?.message) {
+        msg = error.message;
+      }
+      setFormError(msg);
+    }
   };
 
   const progress = (currentStep / steps.length) * 100;
@@ -513,9 +543,15 @@ const Register = () => {
                 <div className="space-y-1">
                   <Label htmlFor="terminos" className="text-sm">
                     Acepto los{" "}
-                    <a href="#" className="text-primary hover:underline">
+                    <button
+                      type="button"
+                      className="text-primary hover:underline p-0 bg-transparent border-none underline cursor-pointer"
+                      style={{ background: "none", border: "none" }}
+                      aria-label="Ver términos y condiciones"
+                      tabIndex={0}
+                    >
                       términos y condiciones
-                    </a>{" "}
+                    </button>{" "}
                     del servicio *
                   </Label>
                 </div>
@@ -530,9 +566,15 @@ const Register = () => {
                 <div className="space-y-1">
                   <Label htmlFor="privacidad" className="text-sm">
                     Acepto la{" "}
-                    <a href="#" className="text-primary hover:underline">
+                    <button
+                      type="button"
+                      className="text-primary hover:underline p-0 bg-transparent border-none underline cursor-pointer"
+                      style={{ background: "none", border: "none" }}
+                      aria-label="Ver política de privacidad"
+                      tabIndex={0}
+                    >
                       política de privacidad
-                    </a>{" "}
+                    </button>{" "}
                     y el procesamiento de mis datos *
                   </Label>
                 </div>
@@ -552,6 +594,16 @@ const Register = () => {
       
       <main className="container py-12">
         <div className="max-w-4xl mx-auto">
+          {formError && (
+            <div className="mb-4 p-3 rounded bg-red-100 text-red-700 border border-red-300 text-center">
+              {formError}
+            </div>
+          )}
+          {formSuccess && (
+            <div className="mb-4 p-3 rounded bg-green-100 text-green-700 border border-green-300 text-center">
+              {formSuccess}
+            </div>
+          )}
           {/* Header */}
           <div className="text-center space-y-4 mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
@@ -591,17 +643,19 @@ const Register = () => {
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
                 
+                // Extract the className logic into a variable
+                let stepClassName = "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ";
+                if (isActive) {
+                  stepClassName += "bg-primary border-primary text-primary-foreground";
+                } else if (isCompleted) {
+                  stepClassName += "bg-success border-success text-success-foreground";
+                } else {
+                  stepClassName += "bg-background border-muted-foreground/30 text-muted-foreground";
+                }
+
                 return (
                   <div key={step.id} className="flex items-center">
-                    <div className={`
-                      flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
-                      ${isActive 
-                        ? 'bg-primary border-primary text-primary-foreground' 
-                        : isCompleted 
-                          ? 'bg-success border-success text-success-foreground' 
-                          : 'bg-background border-muted-foreground/30 text-muted-foreground'
-                      }
-                    `}>
+                    <div className={stepClassName}>
                       {isCompleted ? (
                         <CheckCircle2 className="h-5 w-5" />
                       ) : (

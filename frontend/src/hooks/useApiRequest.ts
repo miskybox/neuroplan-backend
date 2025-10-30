@@ -4,7 +4,7 @@ import { useState } from 'react';
 type ExecResponse<T> = { success: boolean; data: T };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || 'http://localhost:3001';
-const API_PREFIX = '/api';
+const API_PREFIX = '/api'; // Restauramos el prefijo /api ya que el backend lo usa
 
 export const useApiRequest = (endpoint: string) => {
   const [loading, setLoading] = useState(false);

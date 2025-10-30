@@ -3,7 +3,7 @@ import * as Handlebars from 'handlebars';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import puppeteer from 'puppeteer';
-import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseService } from '../modules/supabase/supabase.service';
 
 @Injectable()
 export class RenderService {
@@ -28,7 +28,7 @@ export class RenderService {
 
   async uploadPdfToSupabase(userId: string, buf: Buffer) {
     const key = `peis/${userId}/${Date.now()}.pdf`;
-    const cli = this.supa.get();
+    const cli = this.supa.getClient();
     const { error } = await cli.storage.from(process.env.SUPABASE_PEIS_BUCKET).upload(key, buf, {
       contentType: 'application/pdf'
     });

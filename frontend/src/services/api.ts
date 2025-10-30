@@ -1,8 +1,14 @@
 import axios from 'axios';
 
+// Normaliza la base URL para asegurar el sufijo /api
+function getNormalizedBaseUrl(): string {
+  const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001').replace(/\/+$/, '');
+  return raw.endsWith('/api') ? raw : `${raw}/api`;
+}
+
 // Configuración base de axios
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
+  baseURL: getNormalizedBaseUrl(),
   timeout: Number.parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
   headers: {
     'Content-Type': 'application/json',

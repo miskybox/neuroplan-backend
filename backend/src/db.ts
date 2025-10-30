@@ -220,3 +220,10 @@ export async function createActivityLog(logData: {
 
 // Exportar el cliente por defecto
 export default supabase;
+
+// Test de conexión a Supabase al arrancar el servidor
+if (require.main === module) {
+  (async () => {
+    await testSupabaseConnection();
+  })();
+}

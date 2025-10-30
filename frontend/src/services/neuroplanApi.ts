@@ -33,7 +33,7 @@ export const studentsService = {
     formData.append('file', file);
     formData.append('student', JSON.stringify(student));
     if (context) formData.append('context', context);
-    return api.post(`/api/reports`, formData, {
+    return api.post(`/reports`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -121,10 +121,10 @@ export const workflowService = {
 
 // Health Check Service
 export const healthService = {
-  // Verificar estado del servidor (endpoint con prefijo /api)
+  // Verificar estado del servidor
   check: async (): Promise<ApiResponse<{ status: string; timestamp: string }>> => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-    const response = await fetch(`${baseUrl}/api/health`);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+    const response = await fetch(`${baseUrl}/health`);
     const data = await response.json();
     return {
       data,
@@ -156,12 +156,12 @@ export const bedrockService = {
 
 // Auth Service (si se implementa más adelante)
 export const authService = {
-  // Login placeholder (para futura implementación)
-  login: (email: string, password: string): Promise<ApiResponse<{ token: string; user: any }>> =>
+  // Login compatible con accessToken o token
+  login: (email: string, password: string): Promise<ApiResponse<{ accessToken?: string; token?: string; user: any }>> =>
     api.post('/auth/login', { email, password }).then(res => res.data),
 
-  // Register placeholder
-  register: (userData: any): Promise<ApiResponse<{ token: string; user: any }>> =>
+  // Register compatible con accessToken o token
+  register: (userData: any): Promise<ApiResponse<{ accessToken?: string; token?: string; user: any }>> =>
     api.post('/auth/register', userData).then(res => res.data),
 
   // Logout

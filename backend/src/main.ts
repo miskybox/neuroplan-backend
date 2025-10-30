@@ -36,10 +36,10 @@ async function bootstrap(): Promise<void> {
   // 3) Seguridad
   app.use(helmet());
 
-  // 4) CORS desde env o por defecto a 5173
+  // 4) CORS desde env o por defecto a 5173 y 5174
   const origins =
     (process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean)) ||
-    ['http://localhost:5173'];
+    ['http://localhost:5173', 'http://localhost:5174'];
   app.enableCors({
     origin: origins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

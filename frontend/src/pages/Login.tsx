@@ -16,9 +16,7 @@ import {
   EyeOff, 
   ArrowRight,
   GraduationCap,
-  Sparkles,
-  AlertCircle,
-  CheckCircle2
+  Sparkles
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,6 +37,7 @@ const Login = () => {
   const { toast } = useToast();
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof LoginFormData, value: any) => {
     setFormData(prev => ({
@@ -49,9 +48,11 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
     // Validaciones básicas
     if (!formData.email || !formData.password) {
+      setFormError("Por favor, completa todos los campos");
       toast({
         title: "Error",
         description: "Por favor, completa todos los campos",
@@ -61,6 +62,7 @@ const Login = () => {
     }
 
     if (!formData.email.includes("@")) {
+      setFormError("Por favor, introduce un email válido");
       toast({
         title: "Error",
         description: "Por favor, introduce un email válido",
@@ -77,10 +79,11 @@ const Login = () => {
         title: "¡Bienvenido de vuelta!",
         description: "Has iniciado sesión correctamente en tu Perfil NeuroAcadémico",
       });
-      
+      setFormError(null);
       // Redirigir al dashboard
       navigate("/dashboard");
     } else {
+      setFormError("Email o contraseña incorrectos. Inténtalo de nuevo.");
       toast({
         title: "Error de autenticación",
         description: "Email o contraseña incorrectos. Inténtalo de nuevo.",
@@ -122,6 +125,11 @@ const Login = () => {
           </div>
 
           {/* Login Card */}
+          {formError && (
+            <div className="mb-4 p-3 rounded bg-red-100 text-red-700 border border-red-300 text-center">
+              {formError}
+            </div>
+          )}
           <Card className="shadow-elegant">
             <CardHeader className="text-center">
               <div className="mx-auto w-16 h-16 rounded-full bg-gradient-hero flex items-center justify-center mb-4">

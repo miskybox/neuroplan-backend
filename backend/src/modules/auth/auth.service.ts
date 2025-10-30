@@ -19,36 +19,55 @@ export class AuthService {
         throw new ConflictException('El email ya está registrado');
       }
 
-      // Crear usuario en Supabase Auth
+
+
+      // --- Permitir valores demo para centerId y role ---
+      // Si centerId no es un UUID válido, usar uno demo fijo
+      const uuidDemo = '11111111-1111-1111-1111-111111111111';
+      const validRoles = ['ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO'];
+      let centerId = dto.centerId;
+      let role = dto.role;
+      // Validar UUID simple (versión básica)
+      if (!/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(centerId)) {
+        centerId = uuidDemo;
+      }
+      if (!validRoles.includes(role)) {
+        role = 'ADMIN';
+      }
+
+      // Crear usuario en Supabase Auth sin confirmación de email (para MVP)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: dto.email,
         password: dto.password,
         options: {
+          emailRedirectTo: undefined, // No redirigir a confirmación
           data: {
             first_name: dto.firstName,
             last_name: dto.lastName,
-            role: dto.role,
-            center_id: dto.centerId,
+            role,
+            center_id: centerId,
           }
         }
       });
 
       if (authError) {
-        console.error('Error en Supabase Auth:', authError);
+        console.error('Error en Supabase Auth:', JSON.stringify(authError, null, 2));
         throw new BadRequestException('Error al crear usuario: ' + authError.message);
       }
 
       if (!authData.user) {
+        console.error('Supabase Auth no devolvió usuario:', JSON.stringify(authData, null, 2));
         throw new BadRequestException('No se pudo crear el usuario');
       }
 
       // Crear usuario en nuestra tabla de usuarios
+
       const userData = {
         email: dto.email,
-        role: dto.role,
+        role,
         first_name: dto.firstName,
         last_name: dto.lastName,
-        center_id: dto.centerId,
+        center_id: centerId,
       };
 
       const dbUser = await createUser(userData);
