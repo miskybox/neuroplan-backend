@@ -58,15 +58,15 @@ interface FormData {
   privacidad: boolean;
 }
 
-  const Register = () => {
-    const [currentStep, setCurrentStep] = useState(1);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+const Register = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
-    
-    const [formData, setFormData] = useState<FormData>({
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [formData, setFormData] = useState<FormData>({
     nombre: "",
     apellidos: "",
     email: "",
@@ -180,6 +180,43 @@ interface FormData {
   };
 
   const nextStep = () => {
+    // Validar campos requeridos antes de avanzar
+    let canProceed = true;
+    let errorMessage = "";
+
+    if (currentStep === 1) {
+      if (!formData.nombre.trim()) {
+        errorMessage = "El nombre es obligatorio";
+        canProceed = false;
+      } else if (!formData.apellidos.trim()) {
+        errorMessage = "Los apellidos son obligatorios";
+        canProceed = false;
+      } else if (!formData.email.trim()) {
+        errorMessage = "El email es obligatorio";
+        canProceed = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        errorMessage = "El email no es válido";
+        canProceed = false;
+      } else if (!formData.fechaNacimiento) {
+        errorMessage = "La fecha de nacimiento es obligatoria";
+        canProceed = false;
+      }
+    } else if (currentStep === 2) {
+      if (!formData.nivelActual) {
+        errorMessage = "El nivel académico es obligatorio";
+        canProceed = false;
+      } else if (!formData.objetivosAcademicos.trim()) {
+        errorMessage = "Los objetivos académicos son obligatorios";
+        canProceed = false;
+      }
+    }
+
+    if (!canProceed) {
+      setFormError(errorMessage);
+      return;
+    }
+
+    setFormError(null);
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -210,45 +247,110 @@ interface FormData {
       return;
     }
 
+    // Validar campos básicos nuevamente antes de enviar
+    if (!formData.nombre.trim() || !formData.apellidos.trim() || !formData.email.trim()) {
+      setFormError("Por favor completa todos los campos obligatorios");
+      return;
+    }
+
+    if (isSubmitting) {
+      return; // Prevenir envíos duplicados
+    }
+
+    setIsSubmitting(true);
+    setFormError(null);
+    setFormSuccess(null);
+
     // Preparar datos para el backend (en inglés, solo los requeridos)
     // Usamos valores por defecto para MVP
     const userData = {
-      firstName: formData.nombre,
-      lastName: formData.apellidos,
-      email: formData.email,
+      firstName: formData.nombre.trim(),
+      lastName: formData.apellidos.trim(),
+      email: formData.email.trim().toLowerCase(),
       password: formData.password,
       role: "PROFESOR", // Rol por defecto para MVP
       centerId: "11111111-1111-1111-1111-111111111111" // Centro demo con UUID válido
     };
 
     try {
-      setFormError(null);
-      setFormSuccess(null);
       const { authService } = await import("@/services/neuroplanApi");
       const response = await authService.register(userData);
-      const token = (response as any)?.accessToken || (response as any)?.token;
+      
+      console.log("Respuesta del registro:", response); // Debug
+      
+      // El servicio neuroplanApi hace: api.post(...).then(res => res.data)
+      // Entonces response es directamente res.data, que es el objeto que devuelve NestJS
+      // El backend devuelve directamente: { accessToken, user: {...}, authUser: {...} }
+      // NO está envuelto en { data: {...} } porque NestJS devuelve el objeto directamente
+      const token = response?.accessToken || (response as any)?.token;
+      const user = response?.user;
+      
       if (token) {
         localStorage.setItem("authToken", token);
-        localStorage.setItem("neuroplan_user", JSON.stringify((response as any).user));
+        if (user) {
+          localStorage.setItem("neuroplan_user", JSON.stringify(user));
+        }
         setFormSuccess("¡Registro exitoso! Redirigiendo al login...");
         setTimeout(() => {
-          globalThis.location.href = "/login";
+          window.location.href = "/login";
         }, 1800);
       } else {
-        setFormError((response as any)?.message || "No se pudo crear la cuenta. Intenta de nuevo.");
+        // Si no hay token, puede ser que el registro fue exitoso pero la respuesta no tiene el formato esperado
+        // O puede ser un error. Revisamos el console.log para debuggear
+        console.warn("Registro aparentemente exitoso pero sin token. Respuesta:", response);
+        
+        // Intentar verificar si realmente fue exitoso revisando si hay un user
+        if (user) {
+          // Si hay user pero no token, algo está mal pero el usuario se creó
+          setFormSuccess("Usuario creado, pero hubo un problema con el token. Redirigiendo al login...");
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 1800);
+        } else {
+          // No hay token ni user, definitivamente es un error
+          const errorMsg = (response && typeof response === 'object' && "message" in response 
+            ? (response as any).message 
+            : undefined)
+            || (response && typeof response === 'object' && "error" in response
+              ? (response as any).error
+              : undefined)
+            || "No se pudo crear la cuenta. Intenta de nuevo.";
+          setFormError(errorMsg);
+          setIsSubmitting(false);
+        }
       }
     } catch (error: any) {
+      console.error("Error en registro:", error);
       let msg = "No se pudo registrar. Intenta de nuevo.";
+      
+      // Manejar diferentes formatos de error
       if (error?.response?.data?.message) {
         msg = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        msg = error.response.data.error;
+      } else if (Array.isArray(error?.response?.data?.message)) {
+        // Si el backend devuelve un array de errores de validación
+        msg = error.response.data.message.join(", ");
       } else if (error?.message) {
         msg = error.message;
+      } else if (typeof error === 'string') {
+        msg = error;
       }
+      
       setFormError(msg);
+      setIsSubmitting(false);
     }
   };
 
   const progress = (currentStep / steps.length) * 100;
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    // Solo intentamos enviar cuando estamos en el último paso
+    if (currentStep === steps.length) {
+      void handleSubmit();
+    }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -495,6 +597,9 @@ interface FormData {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  name="password"
+                  autoComplete="new-password"
+                  required
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   placeholder="Mínimo 8 caracteres"
@@ -517,6 +622,9 @@ interface FormData {
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  autoComplete="new-password"
+                  required
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                   placeholder="Repite tu contraseña"
@@ -689,33 +797,49 @@ interface FormData {
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="space-y-6">
-              {renderStepContent()}
-              
-              {/* Navigation */}
-              <div className="flex justify-between pt-6 border-t">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Anterior
-                </Button>
-                
-                {currentStep < steps.length ? (
-                  <Button onClick={nextStep} className="flex items-center gap-2">
-                    Siguiente
-                    <ArrowRight className="h-4 w-4" />
+            <CardContent>
+              <form onSubmit={handleFormSubmit} noValidate className="space-y-6">
+                {renderStepContent()}
+
+                {/* Navigation */}
+                <div className="flex justify-between pt-6 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={currentStep === 1}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Anterior
                   </Button>
-                ) : (
-                  <Button onClick={handleSubmit} className="flex items-center gap-2 bg-gradient-hero">
-                    Crear Perfil NeuroAcadémico
-                    <Brain className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+
+                  {currentStep < steps.length ? (
+                    <Button type="button" onClick={nextStep} className="flex items-center gap-2">
+                      Siguiente
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="submit" 
+                      className="flex items-center gap-2 bg-gradient-hero"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span className="mr-2 animate-spin">⏳</span>
+                          Creando cuenta...
+                        </>
+                      ) : (
+                        <>
+                          Crear Perfil NeuroAcadémico
+                          <Brain className="h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </form>
             </CardContent>
           </Card>
           

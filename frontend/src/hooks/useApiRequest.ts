@@ -1,10 +1,12 @@
-
 import { useState } from 'react';
 
 type ExecResponse<T> = { success: boolean; data: T };
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || 'http://localhost:3001';
-const API_PREFIX = '/api'; // Restauramos el prefijo /api ya que el backend lo usa
+// Normaliza la base para que termine exactamente en /api
+function getBaseApi(): string {
+  const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001').replace(/\/\/+$/, '');
+  return raw.endsWith('/api') ? raw : `${raw}/api`;
+}
 
 export const useApiRequest = (endpoint: string) => {
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,13 @@ export const useApiRequest = (endpoint: string) => {
         body = bodyOrOptions;
       }
 
-      const url = `${API_BASE}${API_PREFIX}${endpoint}`; // ej: http://localhost:3001/api/uploads/pdf-analysis
+  const url = `${getBaseApi()}${endpoint}`; // ej: http://localhost:3001/api/uploads/pdf-analysis
+
+      // Agregar token de autenticación si existe
+      const token = localStorage.getItem('authToken');
+      if (token && !(headers as any)['Authorization']) {
+        (headers as any)['Authorization'] = `Bearer ${token}`;
+      }
 
       const res = await fetch(url, {
         method: options?.method || 'POST',
@@ -46,13 +54,26 @@ export const useApiRequest = (endpoint: string) => {
         headers,
       });
 
+      if (!res.ok) {
+        let errorMessage = 'Error en la petición';
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = `Error ${res.status}: ${res.statusText}`;
+        }
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
+
       const contentType = res.headers.get('content-type') || '';
       const parsed = contentType.includes('application/json') ? await res.json() : await res.text();
 
       return { success: res.ok, data: parsed as T };
     } catch (err: any) {
-      setError(err?.message || 'Error de red');
-      throw err;
+      const msg = err?.message || 'Error de red';
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }

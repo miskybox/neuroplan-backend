@@ -10,7 +10,7 @@ interface StudentDto {
 const students: StudentDto[] = [];
 let nextId = 1;
 
-@Controller('uploads/students')
+@Controller('students')
 export class StudentsController {
   @Get()
   getAll() {

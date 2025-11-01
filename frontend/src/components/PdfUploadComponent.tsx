@@ -24,6 +24,8 @@ interface PdfAnalysisResult {
     type: string;
   };
   timestamp: string;
+  // Indica si la respuesta proviene del análisis básico sin IA (fallback)
+  fallback?: boolean;
 }
 
 export function PdfUploadComponent() {
@@ -60,12 +62,17 @@ export function PdfUploadComponent() {
     try {
       const result = await analyzePdf<{ success: boolean; analysis: PdfAnalysisResult; message: string }>(formData);
       if (result.success && (result.data as any).analysis) {
-        setAnalysisResult((result.data as any).analysis);
+        const payload = (result.data as any).analysis;
+        setAnalysisResult(payload);
       } else {
+        const errorMsg = (result.data as any)?.message || 'Respuesta inesperada del servidor';
         console.error('Respuesta inesperada:', result.data);
+        throw new Error(errorMsg);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error analyzing PDF:', err);
+      const errorMsg = err?.message || 'Error al analizar el PDF. Verifica que el backend esté corriendo.';
+      throw new Error(errorMsg);
     }
   };
 
@@ -113,8 +120,20 @@ export function PdfUploadComponent() {
   const handleTestConnection = async () => {
     setTestingConnection(true);
     try {
-      // Puedes sustituir por: await fetch(`${API_BASE}/api/uploads/test`)
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const url = `${baseUrl.replace(/\/+$/, '')}/api/uploads/test`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        alert('✅ Conexión exitosa con el backend');
+      } else {
+        alert('❌ Error: ' + (data.message || 'No se pudo conectar'));
+      }
+    } catch (err: any) {
+      console.error('Error testing connection:', err);
+      alert('❌ Error de conexión: ' + (err?.message || 'Verifica que el backend esté corriendo en http://localhost:3001'));
     } finally {
       setTestingConnection(false);
     }
@@ -190,7 +209,19 @@ export function PdfUploadComponent() {
                 'Probar Conexión'
               )}
             </Button>
-            <Button onClick={handleAnalyze} disabled={!selectedFile || loading} className="flex-1" size="lg">
+            <Button 
+              onClick={async () => {
+                try {
+                  await handleAnalyze();
+                } catch (err: any) {
+                  // El error ya se maneja en useApiRequest y se muestra en el Alert
+                  console.error('Error en handleAnalyze:', err);
+                }
+              }} 
+              disabled={!selectedFile || loading} 
+              className="flex-1" 
+              size="lg"
+            >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
@@ -223,6 +254,11 @@ export function PdfUploadComponent() {
                 Resultado del Análisis
               </CardTitle>
               <div className="flex gap-2">
+                {analysisResult?.fallback && (
+                  <span className="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    Análisis básico sin IA (Ollama no disponible)
+                  </span>
+                )}
                 <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={generatingPdf}>
                   {generatingPdf ? (
                     <>

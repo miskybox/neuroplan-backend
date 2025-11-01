@@ -112,6 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authService.logout();
     setUser(null);
     localStorage.removeItem('neuroplan_user');
+    localStorage.removeItem('authToken');
   };
 
   const updateUser = (userData: Partial<User>) => {

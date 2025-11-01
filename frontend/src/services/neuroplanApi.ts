@@ -19,12 +19,12 @@ import type {
 export const studentsService = {
   // Crear estudiante
   create: (studentData: CreateStudentDTO): Promise<ApiResponse<Student>> => {
-    return api.post('/uploads/students', studentData).then(res => res.data);
+    return api.post('/students', studentData).then(res => res.data);
   },
   
   // Obtener todos los estudiantes
   getAll: (): Promise<ApiResponse<Student[]>> => {
-    return api.get('/uploads/students').then(res => res.data);
+    return api.get('/students').then(res => res.data);
   },
   
   // Subir reporte médico (flujo MVP)
@@ -121,15 +121,10 @@ export const workflowService = {
 
 // Health Check Service
 export const healthService = {
-  // Verificar estado del servidor
+  // Verificar estado del servidor usando el cliente axios ya normalizado
   check: async (): Promise<ApiResponse<{ status: string; timestamp: string }>> => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-    const response = await fetch(`${baseUrl}/health`);
-    const data = await response.json();
-    return {
-      data,
-      status: response.status,
-    };
+    const res = await api.get('/health');
+    return res.data;
   },
 };
 
