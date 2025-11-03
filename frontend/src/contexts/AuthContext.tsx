@@ -65,12 +65,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Intentar login con el backend (si está disponible)
       try {
         const response = await authService.login(email, password);
-        // Si el backend responde correctamente (acepta accessToken o token)
-        const token = response.data.accessToken || response.data.token;
-        if (token && response.data.user) {
+        // authService.login ya hace .then(res => res.data), así que response es el objeto directo
+        const token = response.accessToken || response.token;
+        if (token && response.user) {
           localStorage.setItem('authToken', token);
-          setUser(response.data.user);
-          localStorage.setItem('neuroplan_user', JSON.stringify(response.data.user));
+          setUser(response.user);
+          localStorage.setItem('neuroplan_user', JSON.stringify(response.user));
           return true;
         }
       } catch (backendError) {

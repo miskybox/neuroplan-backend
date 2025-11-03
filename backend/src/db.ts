@@ -72,6 +72,7 @@ export async function getUserByEmail(email: string) {
 
 // Función para crear usuario
 export async function createUser(userData: {
+  id?: string;
   email: string;
   role: string;
   first_name?: string;

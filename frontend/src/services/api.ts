@@ -9,7 +9,7 @@ function getNormalizedBaseUrl(): string {
 // Configuración base de axios
 const api = axios.create({
   baseURL: getNormalizedBaseUrl(),
-  timeout: Number.parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
+  timeout: Number.parseInt(import.meta.env.VITE_API_TIMEOUT || '60000'), // 60 segundos para análisis con IA
   headers: {
     'Content-Type': 'application/json',
   },

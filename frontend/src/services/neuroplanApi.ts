@@ -152,11 +152,11 @@ export const bedrockService = {
 // Auth Service (si se implementa más adelante)
 export const authService = {
   // Login compatible con accessToken o token
-  login: (email: string, password: string): Promise<ApiResponse<{ accessToken?: string; token?: string; user: any }>> =>
+  login: (email: string, password: string): Promise<{ accessToken?: string; token?: string; user: any; authUser?: any }> =>
     api.post('/auth/login', { email, password }).then(res => res.data),
 
   // Register compatible con accessToken o token
-  register: (userData: any): Promise<ApiResponse<{ accessToken?: string; token?: string; user: any }>> =>
+  register: (userData: any): Promise<{ accessToken?: string; token?: string; user: any; authUser?: any }> =>
     api.post('/auth/register', userData).then(res => res.data),
 
   // Logout

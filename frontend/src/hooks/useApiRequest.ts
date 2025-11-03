@@ -1,79 +1,61 @@
 import { useState } from 'react';
+import api from '@/services/api';
+import { AxiosRequestConfig, AxiosError } from 'axios';
 
 type ExecResponse<T> = { success: boolean; data: T };
 
-// Normaliza la base para que termine exactamente en /api
-function getBaseApi(): string {
-  const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001').replace(/\/\/+$/, '');
-  return raw.endsWith('/api') ? raw : `${raw}/api`;
-}
-
 export const useApiRequest = (endpoint: string) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   /**
-   * Permite enviar JSON, FormData o texto plano.
-   * Uso:
-   *   const { execute } = useApiRequest('/uploads/pdf-analysis');
-   *   await execute(formData)                       // FormData
-   *   await execute({ foo: 'bar' })                // JSON
-   *   await execute('texto plano', { method: 'POST' })
+   * Ejecuta una petición HTTP usando axios
+   *
+   * @param bodyOrOptions - Datos para POST/PUT (puede ser FormData o JSON)
+   * @param config - Configuración adicional de axios (opcional)
+   * @returns Respuesta con { success, data }
    */
   async function execute<T = any>(
-    bodyOrOptions?: FormData | BodyInit | object,
-    options?: RequestInit
+    bodyOrOptions?: any,
+    config?: AxiosRequestConfig
   ): Promise<ExecResponse<T>> {
     setLoading(true);
     setError(null);
 
     try {
-      let body: BodyInit | undefined;
-      let headers: HeadersInit = options?.headers || {};
+      const method = config?.method || 'POST';
+      let response;
 
+      // Determinar si es FormData o JSON
       if (bodyOrOptions instanceof FormData) {
-        body = bodyOrOptions; // el navegador setea el boundary
-      } else if (typeof bodyOrOptions === 'object' && bodyOrOptions !== null) {
-        body = JSON.stringify(bodyOrOptions);
-        headers = { 'Content-Type': 'application/json', ...headers };
-      } else if (typeof bodyOrOptions === 'string') {
-        body = bodyOrOptions;
+        response = await api.request<T>({
+          url: endpoint,
+          method,
+          data: bodyOrOptions,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          ...config,
+        });
+      } else {
+        response = await api.request<T>({
+          url: endpoint,
+          method,
+          data: bodyOrOptions,
+          ...config,
+        });
       }
 
-  const url = `${getBaseApi()}${endpoint}`; // ej: http://localhost:3001/api/uploads/pdf-analysis
+      return { success: true, data: response.data };
+    } catch (err) {
+      const axiosError = err as AxiosError;
+      const errorMessage =
+        (axiosError.response?.data as any)?.message ||
+        axiosError.message ||
+        'Error en la petición';
 
-      // Agregar token de autenticación si existe
-      const token = localStorage.getItem('authToken');
-      if (token && !(headers as any)['Authorization']) {
-        (headers as any)['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(url, {
-        method: options?.method || 'POST',
-        body,
-        headers,
-      });
-
-      if (!res.ok) {
-        let errorMessage = 'Error en la petición';
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Error ${res.status}: ${res.statusText}`;
-        }
-        setError(errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      const contentType = res.headers.get('content-type') || '';
-      const parsed = contentType.includes('application/json') ? await res.json() : await res.text();
-
-      return { success: res.ok, data: parsed as T };
-    } catch (err: any) {
-      const msg = err?.message || 'Error de red';
-      setError(msg);
-      throw new Error(msg);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }

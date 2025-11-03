@@ -230,6 +230,47 @@ const Register = () => {
 
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
+  // Helper to extract error message from response
+
+  // Helper to handle successful registration
+  const handleRegistrationSuccess = (token: string | undefined, user: any, fallbackMsg: string) => {
+    if (token) {
+      localStorage.setItem("authToken", token);
+      if (user) {
+        localStorage.setItem("neuroplan_user", JSON.stringify(user));
+      }
+      setFormSuccess("¡Registro exitoso! Redirigiendo al login...");
+      setTimeout(() => {
+        globalThis.location.href = "/login";
+      }, 1800);
+    } else if (user) {
+      setFormSuccess(fallbackMsg);
+      setTimeout(() => {
+        globalThis.location.href = "/login";
+      }, 1800);
+    }
+  };
+
+  // Helper to extract error message from error object
+  const extractErrorMsg = (error: any): string => {
+    if (error?.response?.data?.message) {
+      if (Array.isArray(error.response.data.message)) {
+        return error.response.data.message.join(", ");
+      }
+      return error.response.data.message;
+    }
+    if (error?.response?.data?.error) {
+      return error.response.data.error;
+    }
+    if (error?.message) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return "No se pudo registrar. Intenta de nuevo.";
+  };
+
   const handleSubmit = async () => {
     // Validaciones finales
     if (formData.password !== formData.confirmPassword) {
@@ -275,69 +316,27 @@ const Register = () => {
     try {
       const { authService } = await import("@/services/neuroplanApi");
       const response = await authService.register(userData);
-      
+
       console.log("Respuesta del registro:", response); // Debug
-      
-      // El servicio neuroplanApi hace: api.post(...).then(res => res.data)
-      // Entonces response es directamente res.data, que es el objeto que devuelve NestJS
-      // El backend devuelve directamente: { accessToken, user: {...}, authUser: {...} }
-      // NO está envuelto en { data: {...} } porque NestJS devuelve el objeto directamente
-      const token = response?.accessToken || (response as any)?.token;
+
+      // authService.register ya hace .then(res => res.data), así que response es el objeto directo
+      const token = response?.accessToken || response?.token;
       const user = response?.user;
-      
-      if (token) {
-        localStorage.setItem("authToken", token);
-        if (user) {
-          localStorage.setItem("neuroplan_user", JSON.stringify(user));
-        }
-        setFormSuccess("¡Registro exitoso! Redirigiendo al login...");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 1800);
+
+      if (token && user) {
+        // Registro completamente exitoso con token y usuario
+        handleRegistrationSuccess(token, user, "¡Registro exitoso! Redirigiendo...");
+      } else if (user) {
+        // Usuario creado pero sin token (caso raro)
+        handleRegistrationSuccess(undefined, user, "Usuario creado. Por favor inicia sesión.");
       } else {
-        // Si no hay token, puede ser que el registro fue exitoso pero la respuesta no tiene el formato esperado
-        // O puede ser un error. Revisamos el console.log para debuggear
-        console.warn("Registro aparentemente exitoso pero sin token. Respuesta:", response);
-        
-        // Intentar verificar si realmente fue exitoso revisando si hay un user
-        if (user) {
-          // Si hay user pero no token, algo está mal pero el usuario se creó
-          setFormSuccess("Usuario creado, pero hubo un problema con el token. Redirigiendo al login...");
-          setTimeout(() => {
-            window.location.href = "/login";
-          }, 1800);
-        } else {
-          // No hay token ni user, definitivamente es un error
-          const errorMsg = (response && typeof response === 'object' && "message" in response 
-            ? (response as any).message 
-            : undefined)
-            || (response && typeof response === 'object' && "error" in response
-              ? (response as any).error
-              : undefined)
-            || "No se pudo crear la cuenta. Intenta de nuevo.";
-          setFormError(errorMsg);
-          setIsSubmitting(false);
-        }
+        console.warn("Registro aparentemente exitoso pero sin token ni usuario. Respuesta:", response);
+        setFormError("No se pudo crear la cuenta. Intenta de nuevo.");
+        setIsSubmitting(false);
       }
     } catch (error: any) {
       console.error("Error en registro:", error);
-      let msg = "No se pudo registrar. Intenta de nuevo.";
-      
-      // Manejar diferentes formatos de error
-      if (error?.response?.data?.message) {
-        msg = error.response.data.message;
-      } else if (error?.response?.data?.error) {
-        msg = error.response.data.error;
-      } else if (Array.isArray(error?.response?.data?.message)) {
-        // Si el backend devuelve un array de errores de validación
-        msg = error.response.data.message.join(", ");
-      } else if (error?.message) {
-        msg = error.message;
-      } else if (typeof error === 'string') {
-        msg = error;
-      }
-      
-      setFormError(msg);
+      setFormError(extractErrorMsg(error));
       setIsSubmitting(false);
     }
   };
@@ -827,8 +826,23 @@ const Register = () => {
                     >
                       {isSubmitting ? (
                         <>
-                          <span className="mr-2 animate-spin">⏳</span>
-                          Creando cuenta...
+                          <span className="mr-2 animate-spin" aria-label="Cargando">
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                              />
+                            </svg>
+                          </span>Creando cuenta...
                         </>
                       ) : (
                         <>

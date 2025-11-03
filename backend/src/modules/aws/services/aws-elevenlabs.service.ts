@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '../../../common/http/http.service';
+import { AxiosError } from 'axios';
 
 /**
  * ElevenLabs Service
@@ -6,11 +8,12 @@ import { Injectable } from '@nestjs/common';
  */
 @Injectable()
 export class AwsElevenlabsService {
+  private readonly logger = new Logger(AwsElevenlabsService.name);
   private readonly mockMode: boolean;
   private readonly apiKey: string;
   private readonly baseUrl: string;
 
-  constructor() {
+  constructor(private readonly httpService: HttpService) {
     this.mockMode = !process.env.ELEVENLABS_API_KEY;
     this.apiKey = process.env.ELEVENLABS_API_KEY || 'mock-key';
     this.baseUrl = 'https://api.elevenlabs.io/v1';
@@ -39,14 +42,9 @@ export class AwsElevenlabsService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/text-to-speech/${voiceId}`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'audio/mpeg',
-          'Content-Type': 'application/json',
-          'xi-api-key': this.apiKey,
-        },
-        body: JSON.stringify({
+      const { data } = await this.httpService.post(
+        `${this.baseUrl}/text-to-speech/${voiceId}`,
+        {
           text,
           model_id: 'eleven_multilingual_v2',
           voice_settings: {
@@ -55,14 +53,17 @@ export class AwsElevenlabsService {
             style: options.style || 0.0,
             use_speaker_boost: options.useSpeakerBoost || true,
           },
-        }),
-      });
+        },
+        {
+          headers: {
+            'Accept': 'audio/mpeg',
+            'xi-api-key': this.apiKey,
+          },
+          responseType: 'arraybuffer',
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.statusText}`);
-      }
-
-      const audioBuffer = await response.arrayBuffer();
+      const audioBuffer = data;
       const audioUrl = await this.uploadAudioToS3(audioBuffer, voiceId);
       const duration = this.estimateDuration(text);
 
@@ -73,7 +74,7 @@ export class AwsElevenlabsService {
         language: 'es',
       };
     } catch (error) {
-      console.error('Error in ElevenLabs text-to-speech:', error);
+      this.logger.error('Error in ElevenLabs text-to-speech:', error);
       return this.mockTextToSpeech(text, voiceId);
     }
   }
@@ -117,7 +118,7 @@ export class AwsElevenlabsService {
         sections: sectionAudios,
       };
     } catch (error) {
-      console.error('Error generating PEI audio:', error);
+      this.logger.error('Error generating PEI audio:', error);
       return this.mockGeneratePeiAudio(peiId, peiContent);
     }
   }
@@ -137,18 +138,13 @@ export class AwsElevenlabsService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/voices`, {
+      const { data } = await this.httpService.get(`${this.baseUrl}/voices`, {
         headers: {
           'Accept': 'application/json',
           'xi-api-key': this.apiKey,
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       return data.voices.map((voice: any) => ({
         voiceId: voice.voice_id,
         name: voice.name,
@@ -157,7 +153,7 @@ export class AwsElevenlabsService {
         description: voice.labels?.description || voice.name,
       }));
     } catch (error) {
-      console.error('Error getting available voices:', error);
+      this.logger.error('Error getting available voices:', error);
       return this.mockGetAvailableVoices();
     }
   }

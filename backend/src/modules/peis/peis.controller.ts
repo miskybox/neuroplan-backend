@@ -16,7 +16,8 @@ import { Response } from 'express';
 import { Observable } from 'rxjs';
 import { PeisService } from './peis.service';
 import { PeiStreamService } from './pei-stream.service';
-import { GeneratePeiFromReportDto } from './dto/create-pei.dto';
+import { PeiGeneratorService } from './pei-generator.service';
+import { GeneratePeiDto } from './dto/generate-pei.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -30,7 +31,40 @@ export class PeisController {
   constructor(
     private readonly peisService: PeisService,
     private readonly peiStreamService: PeiStreamService,
+    private readonly peiGeneratorService: PeiGeneratorService,
   ) {}
+
+  @Post('generate')
+  @Roles('ADMIN', 'ORIENTADOR')
+  @ApiOperation({
+    summary: '🧠 Generate PEI using AI',
+    description: `
+**Frontend endpoint** - Generates a complete PEI using AI based on student information.
+
+**Simplified flow:**
+1. 🧠 Receives student data and diagnosis
+2. 📋 Generates personalized SMART objectives with AI
+3. 🎯 Creates specific curricular adaptations
+4. 📊 Defines evaluation and monitoring plan
+
+**Result:** Complete PEI in seconds.
+
+**Frontend usage:** This is the main endpoint for PEI generation.`
+  })
+  async generatePei(@Body() generatePeiDto: GeneratePeiDto, @CurrentUser() user: any) {
+    try {
+      const userId = user.id || user.userId;
+      const pei = await this.peiGeneratorService.generatePei(generatePeiDto, userId);
+      
+      return {
+        success: true,
+        pei,
+        message: 'PEI generado correctamente',
+      };
+    } catch (error) {
+      throw new BadRequestException(`Error al generar PEI: ${error.message}`);
+    }
+  }
 
   @Post('generate-from-diagnosis')
   @Roles('ADMIN', 'ORIENTADOR')
@@ -92,60 +126,6 @@ export class PeisController {
   ) {
     // Llama a generatePEI del servicio
     return this.peisService.generatePEI(diagnosisData);
-  }
-
-  @Post('generate')
-  @Roles('ADMIN', 'ORIENTADOR')
-  @ApiOperation({
-    summary: '🤖 Generar PEI automáticamente',
-    description: `
-**Endpoint principal del hackathon** - Genera un Plan Educativo Individualizado completo usando IA.
-
-**Flujo completo:**
-1. 📄 Extracción de texto del informe (PDF/OCR)
-2. 🧠 Análisis con Claude AI para identificar NEE
-3. 📋 Generación de objetivos SMART personalizados
-4. 🎯 Adaptaciones curriculares específicas
-5. 📊 Plan de evaluación y seguimiento
-
-**Resultado:** PEI listo en ~30-60 segundos vs 3 semanas manual.
-
-**Siguiente paso:** El PEI está listo para ser revisado y personalizado según las necesidades específicas del estudiante.
-    `,
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'PEI generado correctamente',
-    schema: {
-      example: {
-        id: 'clxxxxx',
-        version: 1,
-        summary: 'Plan Educativo Individualizado para María García López...',
-        diagnosis: 'Diagnóstico principal: TDAH combinado moderado...',
-        status: 'DRAFT',
-        createdAt: '2025-10-11T14:35:00.000Z',
-        studentId: 'clxxxxx',
-        reportId: 'clxxxxx',
-      },
-    },
-  })
-  @ApiResponse({ status: 400, description: 'Datos inválidos o informe no encontrado' })
-  async generatePei(
-    @Body() generatePeiDto: GeneratePeiFromReportDto,
-    @CurrentUser() user: any,
-  ) {
-    // Adaptar GeneratePeiFromReportDto a la estructura esperada por generatePEI
-    const peiData = {
-      studentId: generatePeiDto.studentId,
-      reportId: generatePeiDto.reportId,
-      diagnosis: '', // diagnosis, objectives, etc. deben ser generados por IA en el flujo real
-      objectives: [],
-      adaptations: [],
-      strategies: [],
-      evaluation: [],
-      timeline: [],
-    };
-    return this.peisService.generatePEI(peiData);
   }
 
   @Get()

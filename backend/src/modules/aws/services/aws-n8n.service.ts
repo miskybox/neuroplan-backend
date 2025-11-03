@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '../../../common/http/http.service';
+import { AxiosError } from 'axios';
 
 /**
  * N8N Service
@@ -6,11 +8,12 @@ import { Injectable } from '@nestjs/common';
  */
 @Injectable()
 export class AwsN8nService {
+  private readonly logger = new Logger(AwsN8nService.name);
   private readonly mockMode: boolean;
   private readonly n8nUrl: string;
   private readonly apiKey: string;
 
-  constructor() {
+  constructor(private readonly httpService: HttpService) {
     this.mockMode = !process.env.N8N_API_KEY;
     this.n8nUrl = process.env.N8N_URL || 'http://localhost:5678';
     this.apiKey = process.env.N8N_API_KEY || 'mock-key';
@@ -37,35 +40,31 @@ export class AwsN8nService {
     }
 
     try {
-      const response = await fetch(`${this.n8nUrl}/api/v1/workflows/${workflowId}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-N8N-API-KEY': this.apiKey,
-        },
-        body: JSON.stringify({
+      const { data: result } = await this.httpService.post(
+        `${this.n8nUrl}/api/v1/workflows/${workflowId}/execute`,
+        {
           data,
           waitForCompletion: options.waitForCompletion || false,
           timeout: options.timeout || 30000,
-        }),
-      });
+        },
+        {
+          headers: {
+            'X-N8N-API-KEY': this.apiKey,
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`N8N API error: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       return {
         executionId: result.executionId,
         status: result.status,
         result: result.data,
       };
     } catch (error) {
-      console.error('Error triggering N8N workflow:', error);
+      this.logger.error('Error triggering N8N workflow:', error);
       return {
         executionId: `mock-${Date.now()}`,
         status: 'error',
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -89,21 +88,16 @@ export class AwsN8nService {
     }
 
     try {
-      const url = workflowId 
+      const url = workflowId
         ? `${this.n8nUrl}/api/v1/executions?workflowId=${workflowId}&limit=${limit}`
         : `${this.n8nUrl}/api/v1/executions?limit=${limit}`;
 
-      const response = await fetch(url, {
+      const { data: result } = await this.httpService.get(url, {
         headers: {
           'X-N8N-API-KEY': this.apiKey,
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`N8N API error: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       return result.data.map((execution: any) => ({
         id: execution.id,
         workflowId: execution.workflowId,
@@ -113,7 +107,7 @@ export class AwsN8nService {
         data: execution.data,
       }));
     } catch (error) {
-      console.error('Error getting N8N executions:', error);
+      this.logger.error('Error getting N8N executions:', error);
       return this.mockGetExecutions(workflowId, limit);
     }
   }
@@ -133,17 +127,15 @@ export class AwsN8nService {
     }
 
     try {
-      const response = await fetch(`${this.n8nUrl}/api/v1/executions/${executionId}`, {
-        headers: {
-          'X-N8N-API-KEY': this.apiKey,
-        },
-      });
+      const { data: result } = await this.httpService.get(
+        `${this.n8nUrl}/api/v1/executions/${executionId}`,
+        {
+          headers: {
+            'X-N8N-API-KEY': this.apiKey,
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`N8N API error: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       return {
         id: result.id,
         status: result.status,
@@ -152,7 +144,7 @@ export class AwsN8nService {
         error: result.error,
       };
     } catch (error) {
-      console.error('Error getting execution status:', error);
+      this.logger.error('Error getting execution status:', error);
       return this.mockGetExecutionStatus(executionId);
     }
   }

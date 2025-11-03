@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Upload, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { useApiRequest } from '../hooks/useApiRequest';
+import api from '@/services/api';
 
 interface PdfAnalysisResult {
   studentId: string;
@@ -17,6 +18,8 @@ interface PdfAnalysisResult {
     recommendations: string[];
     keyPoints: string[];
     confidence: number;
+    // Indica si la respuesta proviene del análisis básico sin IA (fallback)
+    fallback?: boolean;
   };
   fileInfo: {
     name: string;
@@ -24,8 +27,6 @@ interface PdfAnalysisResult {
     type: string;
   };
   timestamp: string;
-  // Indica si la respuesta proviene del análisis básico sin IA (fallback)
-  fallback?: boolean;
 }
 
 export function PdfUploadComponent() {
@@ -36,7 +37,7 @@ export function PdfUploadComponent() {
 
   // El hook ahora compone http://localhost:3001/api + endpoint
   const { execute: analyzePdf, loading, error } = useApiRequest('/uploads/pdf-analysis');
-  const { execute: generatePdf, loading: generatingPdf } = useApiRequest('/uploads/generate-pdf-report');
+  const { loading: generatingPdf } = useApiRequest('/uploads/generate-pdf-report');
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -80,26 +81,28 @@ export function PdfUploadComponent() {
     if (!analysisResult) return;
 
     try {
-      const result = await generatePdf<{ success: boolean; pdfBuffer: string; filename?: string }>({
-        analysisData: analysisResult, // ✅ el hook lo serializa a JSON
-      });
+      // Request PDF as blob directly (streaming response from backend)
+      const response = await api.post('/uploads/generate-pdf-report',
+        { analysisData: analysisResult },
+        { responseType: 'blob' } // ✅ Handle streaming blob response
+      );
 
-      const base64 = (result.data as any).pdfBuffer;
-      if (!base64) throw new Error('pdfBuffer no presente en la respuesta');
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
 
-      // Convertir base64 a Blob y descargar
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.codePointAt(i) ?? 0;
+      // Extract filename from Content-Disposition header if available
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'informe.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) filename = filenameMatch[1];
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
 
+      // Download the PDF
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = (result.data as any).filename || 'informe.pdf';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -120,20 +123,17 @@ export function PdfUploadComponent() {
   const handleTestConnection = async () => {
     setTestingConnection(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-      const url = `${baseUrl.replace(/\/+$/, '')}/api/uploads/test`;
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
+      const { data } = await api.get('/uploads/test');
+
+      if (data.success) {
         alert('✅ Conexión exitosa con el backend');
       } else {
         alert('❌ Error: ' + (data.message || 'No se pudo conectar'));
       }
     } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Error de conexión';
       console.error('Error testing connection:', err);
-      alert('❌ Error de conexión: ' + (err?.message || 'Verifica que el backend esté corriendo en http://localhost:3001'));
+      alert('❌ Error de conexión: ' + errorMsg);
     } finally {
       setTestingConnection(false);
     }
@@ -254,9 +254,9 @@ export function PdfUploadComponent() {
                 Resultado del Análisis
               </CardTitle>
               <div className="flex gap-2">
-                {analysisResult?.fallback && (
+                {analysisResult?.analysis?.fallback && (
                   <span className="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
-                    Análisis básico sin IA (Ollama no disponible)
+                    ⚠️ Análisis básico sin IA (Ollama no disponible)
                   </span>
                 )}
                 <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={generatingPdf}>

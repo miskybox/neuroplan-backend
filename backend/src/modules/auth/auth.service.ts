@@ -61,8 +61,9 @@ export class AuthService {
       }
 
       // Crear usuario en nuestra tabla de usuarios
-
+      // IMPORTANTE: Usar el mismo ID de Supabase Auth para mantener consistencia
       const userData = {
+        id: authData.user.id,
         email: dto.email,
         role,
         first_name: dto.firstName,

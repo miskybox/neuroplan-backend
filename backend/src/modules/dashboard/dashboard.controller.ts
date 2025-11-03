@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   UseGuards,
+  BadRequestException
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -16,6 +17,25 @@ import { DashboardService } from './dashboard.service';
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
+  
+  @Get()
+  @ApiOperation({
+    summary: 'Obtener datos del dashboard',
+    description: 'Obtiene estadísticas y datos para el dashboard del usuario autenticado',
+  })
+  async getDashboardData(@CurrentUser() user: any) {
+    try {
+      const userId = user.id || user.userId;
+      const dashboardData = await this.dashboardService.getDashboardStats(userId, user.rol);
+      
+      return {
+        success: true,
+        data: dashboardData,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Error al obtener datos del dashboard: ${error.message}`);
+    }
+  }
 
   @Get('stats')
   @Roles('ADMIN', 'ORIENTADOR', 'PROFESOR', 'DIRECTOR_CENTRO')
