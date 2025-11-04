@@ -223,8 +223,11 @@ export async function createActivityLog(logData: {
 export default supabase;
 
 // Test de conexión a Supabase al arrancar el servidor
+// IIFE requerido: NestJS usa module: commonjs que no soporta top-level await
+// eslint-disable-next-line sonarjs/no-async-iife
 if (require.main === module) {
-  (async () => {
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+  void (async () => {
     await testSupabaseConnection();
   })();
 }

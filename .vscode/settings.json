@@ -1,0 +1,26 @@
+{
+  "sonarlint.rules": {
+    "typescript:S7785": {
+      "level": "off",
+      "comment": "NestJS uses CommonJS which doesn't support top-level await"
+    },
+    "typescript:S6770": {
+      "level": "off",
+      "comment": "False positive - default exports are valid in React"
+    }
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  }
+}

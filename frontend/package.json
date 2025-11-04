@@ -8,7 +8,20 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:api": "playwright test --project=api",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:open": "allure open allure-report",
+    "allure:serve": "allure serve allure-results",
+    "test:e2e:allure": "playwright test --project=api && npm run allure:serve",
+    "playwright:install": "playwright install --with-deps"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -67,21 +80,28 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.26",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
+    "allure-commandline": "^2.34.1",
+    "allure-playwright": "^3.4.2",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "jsdom": "^25.0.1",
     "lovable-tagger": "^1.1.10",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^7.1.9"
+    "vite": "^7.1.9",
+    "vitest": "^4.0.6"
   }
 }

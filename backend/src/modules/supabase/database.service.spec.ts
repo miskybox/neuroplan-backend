@@ -40,7 +40,7 @@ describe('DatabaseService', () => {
     const mockData = [{ id: '1', name: 'Test Student' }];
     const mockResponse = { data: mockData, error: null };
     
-    const clientMock = supabaseServiceMock.getClient();
+    const clientMock = supabaseServiceMock.getClient!();
     jest.spyOn(clientMock, 'from').mockImplementation(() => {
       return {
         ...clientMock,
@@ -58,7 +58,7 @@ describe('DatabaseService', () => {
   });
 
   it('should test database connection', async () => {
-    const clientMock = supabaseServiceMock.getClient();
+    const clientMock = supabaseServiceMock.getClient!();
     jest.spyOn(clientMock, 'from').mockImplementation(() => {
       return {
         ...clientMock,

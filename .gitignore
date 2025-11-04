@@ -24,6 +24,13 @@ frontend/uploads/
 .DS_Store
 *.local
 
+# Test reports
+test-results/
+playwright-report/
+allure-results/
+allure-report/
+.playwright/
+
 # archivos temporales y backups
 *.temp
 *.bak

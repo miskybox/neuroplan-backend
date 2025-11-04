@@ -1,0 +1,119 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database (para desarrollo)
+  postgres:
+    image: postgres:15-alpine
+    container_name: neuroplan-postgres
+    environment:
+      POSTGRES_DB: neuroplan_dev
+      POSTGRES_USER: neuroplan
+      POSTGRES_PASSWORD: neuroplan_password_change_in_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/setup-database.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neuroplan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neuroplan-network
+
+  # Ollama LLM Server
+  ollama:
+    image: ollama/ollama:latest
+    container_name: neuroplan-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - neuroplan-network
+
+  # Backend NestJS
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neuroplan-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://neuroplan:neuroplan_password_change_in_prod@postgres:5432/neuroplan_dev
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      OLLAMA_BASE_URL: http://ollama:11434
+      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:5173
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - neuroplan-network
+    restart: unless-stopped
+
+  # Frontend React + Vite
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: neuroplan-frontend
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_API_BASE_URL: http://localhost:3001
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - neuroplan-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (opcional para producción)
+  nginx:
+    image: nginx:alpine
+    container_name: neuroplan-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - neuroplan-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  neuroplan-network:
+    driver: bridge

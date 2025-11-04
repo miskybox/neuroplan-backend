@@ -234,7 +234,7 @@ export class AwsN8nService {
   }
 
   private getWorkflowIdByType(type: string): string {
-    const workflowMap = {
+    const workflowMap: Record<string, string> = {
       'PEI_APPROVED': 'pei-approval-notification',
       'PEI_CREATED': 'pei-creation-notification',
       'REPORT_PROCESSED': 'report-processing-notification',

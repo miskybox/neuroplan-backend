@@ -418,7 +418,10 @@ export class AwsController {
         privacy: {
           service: 'Comprehend PHI',
           sensitiveDataDetected: phi.hasSensitiveData,
-          phiTypes: Object.keys(phi).filter((k) => phi[k]?.length > 0),
+          phiTypes: Object.keys(phi).filter((k) => {
+            const key = k as keyof typeof phi;
+            return Array.isArray(phi[key]) && phi[key].length > 0;
+          }),
         },
       },
       extractedText: textResult.text,

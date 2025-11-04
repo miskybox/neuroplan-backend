@@ -11,6 +11,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 .env.production
+env.supabase
 
 # Keep .env.example for reference
 # .env.example
@@ -19,6 +20,11 @@ yarn-error.log*
 dist/
 build/
 *.tsbuildinfo
+
+# Compiled files in src (should not be here)
+src/**/*.js
+src/**/*.js.map
+!src/**/*.spec.js
 
 # Backup folders
 __backup__/

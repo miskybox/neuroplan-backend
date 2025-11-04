@@ -27,15 +27,20 @@ export class RenderService {
   }
 
   async uploadPdfToSupabase(userId: string, buf: Buffer) {
+    const bucketName = process.env.SUPABASE_PEIS_BUCKET;
+    if (!bucketName) {
+      throw new BadRequestException('SUPABASE_PEIS_BUCKET no está configurado');
+    }
+    
     const key = `peis/${userId}/${Date.now()}.pdf`;
     const cli = this.supa.getClient();
-    const { error } = await cli.storage.from(process.env.SUPABASE_PEIS_BUCKET).upload(key, buf, {
+    const { error } = await cli.storage.from(bucketName).upload(key, buf, {
       contentType: 'application/pdf'
     });
     if (error) throw new BadRequestException(error.message);
     const ttl = Number(process.env.SIGNED_URL_TTL_SECONDS || 3600);
     const { data, error: signErr } = await cli
-      .storage.from(process.env.SUPABASE_PEIS_BUCKET).createSignedUrl(key, ttl);
+      .storage.from(bucketName).createSignedUrl(key, ttl);
     if (signErr) throw new BadRequestException(signErr.message);
     return { key, pdfUrl: data.signedUrl };
   }
