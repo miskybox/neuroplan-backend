@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { FileText, Upload, CheckCircle, AlertCircle, Download } from 'lucide-react';
-import { useApiRequest } from '../hooks/useApiRequest';
-import api from '@/services/api';
+import { useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  FileText,
+  Upload,
+  CheckCircle,
+  AlertCircle,
+  Download,
+} from "lucide-react";
+import { useApiRequest } from "../hooks/useApiRequest";
+import api from "@/services/api";
+import { logger } from "@/utils/logger";
 
 interface PdfAnalysisResult {
   studentId: string;
@@ -31,17 +44,24 @@ interface PdfAnalysisResult {
 
 export function PdfUploadComponent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<PdfAnalysisResult | null>(null);
-  const [analysisType, setAnalysisType] = useState('general');
+  const [analysisResult, setAnalysisResult] =
+    useState<PdfAnalysisResult | null>(null);
+  const [analysisType, setAnalysisType] = useState("general");
   const [testingConnection, setTestingConnection] = useState(false);
 
   // El hook ahora compone http://localhost:3001/api + endpoint
-  const { execute: analyzePdf, loading, error } = useApiRequest('/uploads/pdf-analysis');
-  const { loading: generatingPdf } = useApiRequest('/uploads/generate-pdf-report');
+  const {
+    execute: analyzePdf,
+    loading,
+    error,
+  } = useApiRequest("/uploads/pdf-analysis");
+  const { loading: generatingPdf } = useApiRequest(
+    "/uploads/generate-pdf-report"
+  );
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (file?.type === 'application/pdf') {
+    if (file?.type === "application/pdf") {
       setSelectedFile(file);
       setAnalysisResult(null);
     }
@@ -49,7 +69,7 @@ export function PdfUploadComponent() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: { "application/pdf": [".pdf"] },
     multiple: false,
   });
 
@@ -57,22 +77,29 @@ export function PdfUploadComponent() {
     if (!selectedFile) return;
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('analysisType', analysisType);
+    formData.append("file", selectedFile);
+    formData.append("analysisType", analysisType);
 
     try {
-      const result = await analyzePdf<{ success: boolean; analysis: PdfAnalysisResult; message: string }>(formData);
+      const result = await analyzePdf<{
+        success: boolean;
+        analysis: PdfAnalysisResult;
+        message: string;
+      }>(formData);
       if (result.success && (result.data as any).analysis) {
         const payload = (result.data as any).analysis;
         setAnalysisResult(payload);
       } else {
-        const errorMsg = (result.data as any)?.message || 'Respuesta inesperada del servidor';
-        console.error('Respuesta inesperada:', result.data);
+        const errorMsg =
+          (result.data as any)?.message || "Respuesta inesperada del servidor";
+        logger.error("Respuesta inesperada:", result.data);
         throw new Error(errorMsg);
       }
     } catch (err: any) {
-      console.error('Error analyzing PDF:', err);
-      const errorMsg = err?.message || 'Error al analizar el PDF. Verifica que el backend esté corriendo.';
+      logger.error("Error analyzing PDF:", err);
+      const errorMsg =
+        err?.message ||
+        "Error al analizar el PDF. Verifica que el backend esté corriendo.";
       throw new Error(errorMsg);
     }
   };
@@ -82,17 +109,18 @@ export function PdfUploadComponent() {
 
     try {
       // Request PDF as blob directly (streaming response from backend)
-      const response = await api.post('/uploads/generate-pdf-report',
+      const response = await api.post(
+        "/uploads/generate-pdf-report",
         { analysisData: analysisResult },
-        { responseType: 'blob' } // ✅ Handle streaming blob response
+        { responseType: "blob" } // ✅ Handle streaming blob response
       );
 
       // Create blob from response
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = new Blob([response.data], { type: "application/pdf" });
 
       // Extract filename from Content-Disposition header if available
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = 'informe.pdf';
+      const contentDisposition = response.headers["content-disposition"];
+      let filename = "informe.pdf";
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
         if (filenameMatch) filename = filenameMatch[1];
@@ -100,7 +128,7 @@ export function PdfUploadComponent() {
 
       // Download the PDF
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
@@ -108,32 +136,35 @@ export function PdfUploadComponent() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Error generating PDF:', err);
+      logger.error("Error generating PDF:", err);
     }
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return (
+      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+    );
   };
 
   const handleTestConnection = async () => {
     setTestingConnection(true);
     try {
-      const { data } = await api.get('/uploads/test');
+      const { data } = await api.get("/uploads/test");
 
       if (data.success) {
-        alert('✅ Conexión exitosa con el backend');
+        alert("✅ Conexión exitosa con el backend");
       } else {
-        alert('❌ Error: ' + (data.message || 'No se pudo conectar'));
+        alert("❌ Error: " + (data.message || "No se pudo conectar"));
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Error de conexión';
-      console.error('Error testing connection:', err);
-      alert('❌ Error de conexión: ' + errorMsg);
+      const errorMsg =
+        err?.response?.data?.message || err?.message || "Error de conexión";
+      logger.error("Error testing connection:", err);
+      alert("❌ Error de conexión: " + errorMsg);
     } finally {
       setTestingConnection(false);
     }
@@ -148,14 +179,17 @@ export function PdfUploadComponent() {
             Análisis de PDF con IA
           </CardTitle>
           <CardDescription>
-            Sube un PDF para analizarlo con Ollama y obtener recomendaciones educativas
+            Sube un PDF para analizarlo con Ollama y obtener recomendaciones
+            educativas
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'
+              isDragActive
+                ? "border-primary bg-primary/5"
+                : "border-gray-300 hover:border-gray-400"
             }`}
           >
             <input {...getInputProps()} />
@@ -164,7 +198,9 @@ export function PdfUploadComponent() {
               <p className="text-lg">Suelta el archivo PDF aquí...</p>
             ) : (
               <div>
-                <p className="text-lg mb-2">Arrastra un PDF aquí o haz clic para seleccionar</p>
+                <p className="text-lg mb-2">
+                  Arrastra un PDF aquí o haz clic para seleccionar
+                </p>
                 <p className="text-sm text-gray-500">Solo archivos PDF</p>
               </div>
             )}
@@ -176,7 +212,9 @@ export function PdfUploadComponent() {
                 <FileText className="h-8 w-8 text-red-500" />
                 <div>
                   <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatFileSize(selectedFile.size)}
+                  </p>
                 </div>
               </div>
               <Badge variant="secondary">PDF</Badge>
@@ -184,7 +222,9 @@ export function PdfUploadComponent() {
           )}
 
           <div className="space-y-2">
-            <label htmlFor="analysisTypeSelect" className="text-sm font-medium">Tipo de Análisis</label>
+            <label htmlFor="analysisTypeSelect" className="text-sm font-medium">
+              Tipo de Análisis
+            </label>
             <select
               id="analysisTypeSelect"
               value={analysisType}
@@ -199,27 +239,32 @@ export function PdfUploadComponent() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleTestConnection} disabled={testingConnection} variant="outline" className="flex-1">
+            <Button
+              onClick={handleTestConnection}
+              disabled={testingConnection}
+              variant="outline"
+              className="flex-1"
+            >
               {testingConnection ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2" />
                   Probando...
                 </>
               ) : (
-                'Probar Conexión'
+                "Probar Conexión"
               )}
             </Button>
-            <Button 
+            <Button
               onClick={async () => {
                 try {
                   await handleAnalyze();
                 } catch (err: any) {
                   // El error ya se maneja en useApiRequest y se muestra en el Alert
-                  console.error('Error en handleAnalyze:', err);
+                  logger.error("Error en handleAnalyze:", err);
                 }
-              }} 
-              disabled={!selectedFile || loading} 
-              className="flex-1" 
+              }}
+              disabled={!selectedFile || loading}
+              className="flex-1"
               size="lg"
             >
               {loading ? (
@@ -239,7 +284,10 @@ export function PdfUploadComponent() {
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription> Error al analizar el PDF: {error} </AlertDescription>
+              <AlertDescription>
+                {" "}
+                Error al analizar el PDF: {error}{" "}
+              </AlertDescription>
             </Alert>
           )}
         </CardContent>
@@ -259,7 +307,12 @@ export function PdfUploadComponent() {
                     ⚠️ Análisis básico sin IA (Ollama no disponible)
                   </span>
                 )}
-                <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={generatingPdf}>
+                <Button
+                  onClick={handleDownloadPdf}
+                  variant="outline"
+                  size="sm"
+                  disabled={generatingPdf}
+                >
                   {generatingPdf ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2" />
@@ -275,20 +328,26 @@ export function PdfUploadComponent() {
               </div>
             </div>
             <CardDescription>
-              Análisis completado el {new Date(analysisResult.timestamp).toLocaleString()}
+              Análisis completado el{" "}
+              {new Date(analysisResult.timestamp).toLocaleString()}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
               <h3 className="font-semibold mb-2">Resumen</h3>
-              <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{analysisResult.analysis.summary}</p>
+              <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
+                {analysisResult.analysis.summary}
+              </p>
             </div>
 
             <div>
               <h3 className="font-semibold mb-2">Puntos Clave</h3>
               <ul className="space-y-1">
                 {analysisResult.analysis.keyPoints.map((point, index) => (
-                  <li key={`${point}-${index}`} className="flex items-start gap-2">
+                  <li
+                    key={`${point}-${index}`}
+                    className="flex items-start gap-2"
+                  >
                     <span className="text-primary font-bold">{index + 1}.</span>
                     <span>{point}</span>
                   </li>
@@ -300,7 +359,10 @@ export function PdfUploadComponent() {
               <h3 className="font-semibold mb-2">Recomendaciones</h3>
               <ul className="space-y-2">
                 {analysisResult.analysis.recommendations.map((rec, i) => (
-                  <li key={`${rec}-${i}`} className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
+                  <li
+                    key={`${rec}-${i}`}
+                    className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg"
+                  >
                     <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                     <span>{rec}</span>
                   </li>
@@ -311,7 +373,10 @@ export function PdfUploadComponent() {
             <div className="flex items-center gap-4">
               <span className="font-semibold">Confianza del Análisis:</span>
               <div className="flex items-center gap-2">
-                <Progress value={analysisResult.analysis.confidence * 100} className="w-32" />
+                <Progress
+                  value={analysisResult.analysis.confidence * 100}
+                  className="w-32"
+                />
                 <span className="text-sm font-medium">
                   {Math.round(analysisResult.analysis.confidence * 100)}%
                 </span>
@@ -321,10 +386,22 @@ export function PdfUploadComponent() {
             <div className="pt-4 border-t">
               <h3 className="font-semibold mb-2">Información del Archivo</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="font-medium">Nombre:</span> {analysisResult.fileInfo.name}</div>
-                <div><span className="font-medium">Tamaño:</span> {formatFileSize(analysisResult.fileInfo.size)}</div>
-                <div><span className="font-medium">Tipo:</span> {analysisResult.fileInfo.type}</div>
-                <div><span className="font-medium">Análisis:</span> {analysisResult.analysisType}</div>
+                <div>
+                  <span className="font-medium">Nombre:</span>{" "}
+                  {analysisResult.fileInfo.name}
+                </div>
+                <div>
+                  <span className="font-medium">Tamaño:</span>{" "}
+                  {formatFileSize(analysisResult.fileInfo.size)}
+                </div>
+                <div>
+                  <span className="font-medium">Tipo:</span>{" "}
+                  {analysisResult.fileInfo.type}
+                </div>
+                <div>
+                  <span className="font-medium">Análisis:</span>{" "}
+                  {analysisResult.analysisType}
+                </div>
               </div>
             </div>
           </CardContent>

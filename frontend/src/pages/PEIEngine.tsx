@@ -2,16 +2,22 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Brain, 
-  Cpu, 
-  FileText, 
-  Target, 
+import {
+  Brain,
+  Cpu,
+  FileText,
+  Target,
   BookOpen,
   Zap,
   Shield,
@@ -27,13 +33,23 @@ import {
   RotateCcw,
   Upload,
   AlertCircle,
-  Plus
+  Plus,
 } from "lucide-react";
-import { studentsService, peisService, healthService } from "../services/neuroplanApi";
-import type { Student, PEI, CreateStudentDTO, GeneratePEIDTO } from "../types/api";
+import {
+  studentsService,
+  peisService,
+  healthService,
+} from "../services/neuroplanApi";
+import type {
+  Student,
+  PEI,
+  CreateStudentDTO,
+  GeneratePEIDTO,
+} from "../types/api";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { BedrockDemo } from "@/components/BedrockDemo";
+import { logger } from "@/utils/logger";
 
 const PEIEngine = () => {
   const { user } = useAuth(); // Hook para mantener contexto de autenticación
@@ -47,9 +63,9 @@ const PEIEngine = () => {
   const [studentName, setStudentName] = useState("");
   const [isCreatingStudent, setIsCreatingStudent] = useState(false);
   const [isGeneratingPEI, setIsGeneratingPEI] = useState(false);
-  
-  // Evitar warning de variable no usada
-  console.debug('User context:', user);
+
+  // Log user context for debugging
+  logger.debug("User context:", user);
 
   // Verificar conexión con el backend al cargar la página
   useEffect(() => {
@@ -64,7 +80,7 @@ const PEIEngine = () => {
       setBackendConnected(true);
       toast.success("Conectado al backend NeuroPlan");
     } catch (error) {
-      console.warn("Backend no disponible, usando modo demo:", error);
+      logger.warn("Backend no disponible, usando modo demo:", error);
       setBackendConnected(false);
       toast.info("Ejecutando en modo demo");
     }
@@ -72,23 +88,23 @@ const PEIEngine = () => {
 
   const loadStudents = async () => {
     if (!backendConnected) return;
-    
+
     try {
       const response = await studentsService.getAll();
       setStudents(response.data || []);
     } catch (error) {
-      console.error("Error loading students:", error);
+      logger.error("Error loading students:", error);
     }
   };
 
   const loadPEIs = async () => {
     if (!backendConnected) return;
-    
+
     try {
       const response = await peisService.getAll();
       setPeis(response.data || []);
     } catch (error) {
-      console.error("Error loading PEIs:", error);
+      logger.error("Error loading PEIs:", error);
     }
   };
 
@@ -118,20 +134,23 @@ const PEIEngine = () => {
       const newStudent = studentResponse.data;
 
       // Subir reporte médico
-      const reportResponse = await studentsService.uploadReport(newStudent.id, selectedFile);
-      
+      const reportResponse = await studentsService.uploadReport(
+        newStudent,
+        selectedFile
+      );
+
       toast.success("Estudiante creado y reporte subido exitosamente");
-      
+
       // Recargar datos
       await loadStudents();
-      
+
       // Limpiar formulario
       setSelectedFile(null);
       setStudentName("");
-      
+
       return { student: newStudent, report: reportResponse.data };
     } catch (error) {
-      console.error("Error creating student:", error);
+      logger.error("Error creating student:", error);
       toast.error("Error al generar PEI");
       return null;
     } finally {
@@ -147,7 +166,7 @@ const PEIEngine = () => {
     try {
       // Simular progreso
       const progressInterval = setInterval(() => {
-        setAnalysisProgress(prev => {
+        setAnalysisProgress((prev) => {
           if (prev >= 90) {
             clearInterval(progressInterval);
             return 90;
@@ -157,35 +176,34 @@ const PEIEngine = () => {
       }, 500);
 
       // Generar PEI real - enviar studentId como string
-      const generateData: GeneratePEIDTO = { 
-        reportId, 
-        studentId: String(studentId) 
+      const generateData: GeneratePEIDTO = {
+        reportId,
+        studentId: String(studentId),
       };
-      
+
       // DEBUG: Verificar datos antes de enviar
-      console.log('🔍 Generando PEI con datos:', generateData);
-      console.log('📊 Tipos:', {
+      logger.debug("🔍 Generando PEI con datos:", generateData);
+      logger.debug("📊 Tipos:", {
         reportId: typeof generateData.reportId,
-        studentId: typeof generateData.studentId
+        studentId: typeof generateData.studentId,
       });
-      
+
       await peisService.generate(generateData);
-      
+
       clearInterval(progressInterval);
       setAnalysisProgress(100);
-      
+
       toast.success("PEI generado exitosamente");
-      
+
       // Recargar PEIs
       await loadPEIs();
-      
+
       setTimeout(() => {
         setIsAnalyzing(false);
         setAnalysisProgress(0);
       }, 2000);
-      
     } catch (error) {
-      console.error("Error generating PEI:", error);
+      logger.error("Error generating PEI:", error);
       toast.error("Error al generar PEI");
       setIsAnalyzing(false);
       setAnalysisProgress(0);
@@ -198,9 +216,9 @@ const PEIEngine = () => {
   const startDemoAnalysis = () => {
     setIsAnalyzing(true);
     setAnalysisProgress(0);
-    
+
     const interval = setInterval(() => {
-      setAnalysisProgress(prev => {
+      setAnalysisProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           setIsAnalyzing(false);
@@ -236,22 +254,50 @@ const PEIEngine = () => {
   const analysisResults = {
     perfilNeurocognitivo: {
       fortalezas: [
-        { nombre: "Memoria Visual", porcentaje: 85, descripcion: "Excelente capacidad para recordar información visual" },
-        { nombre: "Pensamiento Lógico", porcentaje: 78, descripcion: "Habilidad destacada en razonamiento matemático" },
-        { nombre: "Creatividad", porcentaje: 92, descripcion: "Alto nivel de pensamiento creativo e innovador" },
-        { nombre: "Atención Sostenida", porcentaje: 65, descripcion: "Capacidad moderada para mantener la concentración" }
+        {
+          nombre: "Memoria Visual",
+          porcentaje: 85,
+          descripcion: "Excelente capacidad para recordar información visual",
+        },
+        {
+          nombre: "Pensamiento Lógico",
+          porcentaje: 78,
+          descripcion: "Habilidad destacada en razonamiento matemático",
+        },
+        {
+          nombre: "Creatividad",
+          porcentaje: 92,
+          descripcion: "Alto nivel de pensamiento creativo e innovador",
+        },
+        {
+          nombre: "Atención Sostenida",
+          porcentaje: 65,
+          descripcion: "Capacidad moderada para mantener la concentración",
+        },
       ],
       areasApoyo: [
-        { nombre: "Organización Temporal", nivel: "Alto", descripcion: "Necesita apoyo en gestión del tiempo" },
-        { nombre: "Memoria de Trabajo", nivel: "Medio", descripcion: "Apoyo moderado en tareas de memoria" },
-        { nombre: "Regulación Emocional", nivel: "Bajo", descripcion: "Buen manejo de las emociones" }
+        {
+          nombre: "Organización Temporal",
+          nivel: "Alto",
+          descripcion: "Necesita apoyo en gestión del tiempo",
+        },
+        {
+          nombre: "Memoria de Trabajo",
+          nivel: "Medio",
+          descripcion: "Apoyo moderado en tareas de memoria",
+        },
+        {
+          nombre: "Regulación Emocional",
+          nivel: "Bajo",
+          descripcion: "Buen manejo de las emociones",
+        },
       ],
       preferenciasAprendizaje: [
         { tipo: "Visual", porcentaje: 75, icono: Eye },
         { tipo: "Kinestésico", porcentaje: 60, icono: Zap },
         { tipo: "Auditivo", porcentaje: 45, icono: Play },
-        { tipo: "Lectura/Escritura", porcentaje: 55, icono: FileText }
-      ]
+        { tipo: "Lectura/Escritura", porcentaje: 55, icono: FileText },
+      ],
     },
     recomendaciones: [
       {
@@ -259,29 +305,29 @@ const PEIEngine = () => {
         titulo: "Aprendizaje Multimodal",
         descripcion: "Combinar elementos visuales, interactivos y prácticos",
         prioridad: "Alta",
-        impacto: "Alto"
+        impacto: "Alto",
       },
       {
         categoria: "Tecnología",
         titulo: "Herramientas Visuales",
         descripcion: "Utilizar mapas mentales, diagramas y simulaciones",
         prioridad: "Alta",
-        impacto: "Alto"
+        impacto: "Alto",
       },
       {
         categoria: "Evaluación",
         titulo: "Proyectos Prácticos",
         descripcion: "Evaluar mediante proyectos y presentaciones visuales",
         prioridad: "Media",
-        impacto: "Medio"
-      }
-    ]
+        impacto: "Medio",
+      },
+    ],
   };
 
   return (
     <div className="min-h-screen bg-muted/30">
       <Header />
-      
+
       <main className="container py-12 lg:py-16">
         {/* Header de la página */}
         <div className="text-center mb-12">
@@ -293,20 +339,23 @@ const PEIEngine = () => {
               <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
                 PEI Engine
               </h1>
-              <p className="text-lg text-muted-foreground">Motor de Individualización</p>
+              <p className="text-lg text-muted-foreground">
+                Motor de Individualización
+              </p>
             </div>
           </div>
-          
+
           <p className="text-xl text-muted-foreground max-w-4xl mx-auto mb-8">
-            El PEI Engine es nuestro motor de inteligencia artificial que transforma tu perfil neurocognitivo 
-            en un mapa personalizado de aprendizaje, garantizando la máxima eficacia educativa.
+            El PEI Engine es nuestro motor de inteligencia artificial que
+            transforma tu perfil neurocognitivo en un mapa personalizado de
+            aprendizaje, garantizando la máxima eficacia educativa.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
+            <Button
               onClick={startDemoAnalysis}
               disabled={isAnalyzing}
-              size="lg" 
+              size="lg"
               className="group bg-gradient-hero"
             >
               {isAnalyzing ? (
@@ -327,9 +376,13 @@ const PEIEngine = () => {
                 Ver mi Perfil
               </Button>
             </Link>
-            
+
             <Link to="/generate-pei">
-              <Button variant="outline" size="lg" className="group border-2 hover:bg-primary hover:text-white transition-all duration-300">
+              <Button
+                variant="outline"
+                size="lg"
+                className="group border-2 hover:bg-primary hover:text-white transition-all duration-300"
+              >
                 <Plus className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
                 Generar PEI
               </Button>
@@ -338,22 +391,38 @@ const PEIEngine = () => {
         </div>
 
         {/* Estado de conexión del backend */}
-        <Card className={`mb-8 ${backendConnected ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+        <Card
+          className={`mb-8 ${
+            backendConnected
+              ? "bg-green-50 border-green-200"
+              : "bg-yellow-50 border-yellow-200"
+          }`}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               {backendConnected ? (
                 <>
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span className="text-green-800 font-medium">Backend NeuroPlan conectado</span>
-                  <Badge variant="outline" className="text-green-700 border-green-300">
+                  <span className="text-green-800 font-medium">
+                    Backend NeuroPlan conectado
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-green-700 border-green-300"
+                  >
                     Tiempo real
                   </Badge>
                 </>
               ) : (
                 <>
                   <AlertCircle className="h-5 w-5 text-yellow-600" />
-                  <span className="text-yellow-800 font-medium">Ejecutando en modo demo</span>
-                  <Badge variant="outline" className="text-yellow-700 border-yellow-300">
+                  <span className="text-yellow-800 font-medium">
+                    Ejecutando en modo demo
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-yellow-700 border-yellow-300"
+                  >
                     Simulación
                   </Badge>
                 </>
@@ -371,14 +440,20 @@ const PEIEngine = () => {
                 Generador de PEI Conectado
               </CardTitle>
               <CardDescription>
-                Sube un reporte médico y genera un PEI personalizado usando el backend real
+                Sube un reporte médico y genera un PEI personalizado usando el
+                backend real
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="studentName" className="block text-sm font-medium mb-2">Nombre del Estudiante</label>
+                    <label
+                      htmlFor="studentName"
+                      className="block text-sm font-medium mb-2"
+                    >
+                      Nombre del Estudiante
+                    </label>
                     <input
                       id="studentName"
                       type="text"
@@ -389,7 +464,12 @@ const PEIEngine = () => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="reportFile" className="block text-sm font-medium mb-2">Reporte Médico (PDF)</label>
+                    <label
+                      htmlFor="reportFile"
+                      className="block text-sm font-medium mb-2"
+                    >
+                      Reporte Médico (PDF)
+                    </label>
                     <input
                       id="reportFile"
                       type="file"
@@ -399,7 +479,8 @@ const PEIEngine = () => {
                     />
                     {selectedFile && (
                       <p className="text-sm text-muted-foreground mt-2">
-                        Archivo: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                        Archivo: {selectedFile.name} (
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                       </p>
                     )}
                   </div>
@@ -408,31 +489,46 @@ const PEIEngine = () => {
                   <h4 className="font-semibold">Proceso de Generación:</h4>
                   <ol className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">1</span>
+                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">
+                        1
+                      </span>
                       <span>Crear perfil del estudiante</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">2</span>
+                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">
+                        2
+                      </span>
                       <span>Subir y procesar reporte médico</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">3</span>
+                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">
+                        3
+                      </span>
                       <span>Generar PEI con Claude AI</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">4</span>
+                      <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center mt-0.5">
+                        4
+                      </span>
                       <span>Disponible para descarga y audio</span>
                     </li>
                   </ol>
-                  <Button 
+                  <Button
                     onClick={handleCreateAndGenerate}
-                    disabled={isCreatingStudent || isGeneratingPEI || !studentName.trim() || !selectedFile}
+                    disabled={
+                      isCreatingStudent ||
+                      isGeneratingPEI ||
+                      !studentName.trim() ||
+                      !selectedFile
+                    }
                     className="w-full"
                   >
                     {isCreatingStudent || isGeneratingPEI ? (
                       <>
                         <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
-                        {isCreatingStudent ? "Creando estudiante..." : "Generando PEI..."}
+                        {isCreatingStudent
+                          ? "Creando estudiante..."
+                          : "Generando PEI..."}
                       </>
                     ) : (
                       <>
@@ -447,13 +543,20 @@ const PEIEngine = () => {
               {/* Lista de estudiantes */}
               {students.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="font-semibold">Estudiantes Registrados ({students.length})</h4>
+                  <h4 className="font-semibold">
+                    Estudiantes Registrados ({students.length})
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {students.slice(0, 6).map((student) => (
-                      <Card key={student.id} className="hover:shadow-md transition-shadow">
+                      <Card
+                        key={student.id}
+                        className="hover:shadow-md transition-shadow"
+                      >
                         <CardContent className="p-4">
                           <h5 className="font-medium">{student.name}</h5>
-                          <p className="text-sm text-muted-foreground">{student.gradeLevel}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {student.gradeLevel}
+                          </p>
                           {student.diagnosis && (
                             <Badge variant="outline" className="mt-2 text-xs">
                               {student.diagnosis}
@@ -469,28 +572,45 @@ const PEIEngine = () => {
               {/* Lista de PEIs generados */}
               {peis.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="font-semibold">PEIs Generados ({peis.length})</h4>
+                  <h4 className="font-semibold">
+                    PEIs Generados ({peis.length})
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {peis.slice(0, 4).map((pei) => (
-                      <Card key={pei.id} className="hover:shadow-md transition-shadow">
+                      <Card
+                        key={pei.id}
+                        className="hover:shadow-md transition-shadow"
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div>
                               <h5 className="font-medium">PEI #{pei.id}</h5>
                               <p className="text-sm text-muted-foreground">
-                                Generado: {new Date(pei.generatedAt).toLocaleDateString()}
+                                Generado:{" "}
+                                {new Date(pei.generatedAt).toLocaleDateString()}
                               </p>
-                              <Badge 
-                                variant={pei.status === 'approved' ? 'default' : 'secondary'}
+                              <Badge
+                                variant={
+                                  pei.status === "approved"
+                                    ? "default"
+                                    : "secondary"
+                                }
                                 className="mt-2"
                               >
                                 {pei.status}
                               </Badge>
                             </div>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
-                              onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL}/peis/${pei.id}/pdf`, '_blank')}
+                              onClick={() =>
+                                window.open(
+                                  `${import.meta.env.VITE_API_BASE_URL}/peis/${
+                                    pei.id
+                                  }/pdf`,
+                                  "_blank"
+                                )
+                              }
                             >
                               <Download className="h-4 w-4" />
                             </Button>
@@ -511,12 +631,17 @@ const PEIEngine = () => {
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Analizando tu Perfil Neurocognitivo</h3>
-                  <span className="text-sm text-muted-foreground">{analysisProgress}%</span>
+                  <h3 className="text-lg font-semibold">
+                    Analizando tu Perfil Neurocognitivo
+                  </h3>
+                  <span className="text-sm text-muted-foreground">
+                    {analysisProgress}%
+                  </span>
                 </div>
                 <Progress value={analysisProgress} className="h-2" />
                 <p className="text-sm text-muted-foreground">
-                  Procesando datos clínicos, preferencias de aprendizaje y fortalezas cognitivas...
+                  Procesando datos clínicos, preferencias de aprendizaje y
+                  fortalezas cognitivas...
                 </p>
               </div>
             </CardContent>
@@ -529,18 +654,25 @@ const PEIEngine = () => {
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <CheckCircle2 className="h-6 w-6 text-green-600" />
-                <h3 className="text-lg font-semibold text-green-800">Análisis Completado</h3>
+                <h3 className="text-lg font-semibold text-green-800">
+                  Análisis Completado
+                </h3>
               </div>
               <p className="text-green-700">
-                Tu Perfil NeuroAcadémico ha sido analizado exitosamente. 
-                El PEI Engine ha generado recomendaciones personalizadas para optimizar tu aprendizaje.
+                Tu Perfil NeuroAcadémico ha sido analizado exitosamente. El PEI
+                Engine ha generado recomendaciones personalizadas para optimizar
+                tu aprendizaje.
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* Tabs principales */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-8"
+        >
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -550,7 +682,10 @@ const PEIEngine = () => {
               <Brain className="h-4 w-4" />
               Análisis
             </TabsTrigger>
-            <TabsTrigger value="recommendations" className="flex items-center gap-2">
+            <TabsTrigger
+              value="recommendations"
+              className="flex items-center gap-2"
+            >
               <Lightbulb className="h-4 w-4" />
               Recomendaciones
             </TabsTrigger>
@@ -570,7 +705,8 @@ const PEIEngine = () => {
                   ¿Cómo funciona el PEI Engine?
                 </CardTitle>
                 <CardDescription>
-                  Descubre el proceso de análisis e individualización que transforma tu perfil en un plan de aprendizaje personalizado
+                  Descubre el proceso de análisis e individualización que
+                  transforma tu perfil en un plan de aprendizaje personalizado
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -581,37 +717,41 @@ const PEIEngine = () => {
                     </div>
                     <h4 className="font-semibold">1. Recopilación</h4>
                     <p className="text-sm text-muted-foreground">
-                      Extrae información de informes clínicos, evaluaciones y preferencias
+                      Extrae información de informes clínicos, evaluaciones y
+                      preferencias
                     </p>
                   </div>
-                  
+
                   <div className="text-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center mx-auto">
                       <Brain className="h-6 w-6 text-secondary" />
                     </div>
                     <h4 className="font-semibold">2. Análisis IA</h4>
                     <p className="text-sm text-muted-foreground">
-                      Procesa datos con algoritmos de machine learning especializados
+                      Procesa datos con algoritmos de machine learning
+                      especializados
                     </p>
                   </div>
-                  
+
                   <div className="text-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                       <Target className="h-6 w-6 text-accent" />
                     </div>
                     <h4 className="font-semibold">3. Individualización</h4>
                     <p className="text-sm text-muted-foreground">
-                      Genera un perfil único adaptado a tus características neurocognitivas
+                      Genera un perfil único adaptado a tus características
+                      neurocognitivas
                     </p>
                   </div>
-                  
+
                   <div className="text-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mx-auto">
                       <Zap className="h-6 w-6 text-success" />
                     </div>
                     <h4 className="font-semibold">4. Optimización</h4>
                     <p className="text-sm text-muted-foreground">
-                      Ajusta continuamente el plan basado en tu progreso y rendimiento
+                      Ajusta continuamente el plan basado en tu progreso y
+                      rendimiento
                     </p>
                   </div>
                 </div>
@@ -708,20 +848,30 @@ const PEIEngine = () => {
                   Fortalezas Cognitivas Identificadas
                 </CardTitle>
                 <CardDescription>
-                  Análisis detallado de tus capacidades cognitivas más desarrolladas
+                  Análisis detallado de tus capacidades cognitivas más
+                  desarrolladas
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {analysisResults.perfilNeurocognitivo.fortalezas.map((fortaleza, index) => (
-                  <div key={`${fortaleza.nombre}-${index}`} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">{fortaleza.nombre}</h4>
-                      <span className="text-sm text-muted-foreground">{fortaleza.porcentaje}%</span>
+                {analysisResults.perfilNeurocognitivo.fortalezas.map(
+                  (fortaleza, index) => (
+                    <div
+                      key={`${fortaleza.nombre}-${index}`}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">{fortaleza.nombre}</h4>
+                        <span className="text-sm text-muted-foreground">
+                          {fortaleza.porcentaje}%
+                        </span>
+                      </div>
+                      <Progress value={fortaleza.porcentaje} className="h-2" />
+                      <p className="text-sm text-muted-foreground">
+                        {fortaleza.descripcion}
+                      </p>
                     </div>
-                    <Progress value={fortaleza.porcentaje} className="h-2" />
-                    <p className="text-sm text-muted-foreground">{fortaleza.descripcion}</p>
-                  </div>
-                ))}
+                  )
+                )}
               </CardContent>
             </Card>
 
@@ -737,30 +887,38 @@ const PEIEngine = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {analysisResults.perfilNeurocognitivo.areasApoyo.map((area, index) => {
-                  let bgColorClass = 'bg-green-500';
-                  if (area.nivel === 'Alto') bgColorClass = 'bg-red-500';
-                  else if (area.nivel === 'Medio') bgColorClass = 'bg-yellow-500';
-                  
-                  let badgeVariant: any = 'default';
-                  if (area.nivel === 'Alto') badgeVariant = 'destructive';
-                  else if (area.nivel === 'Medio') badgeVariant = 'secondary';
-                  
-                  return (
-                    <div key={`area-${area.nombre}-${index}`} className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                      <div className={`w-3 h-3 rounded-full mt-2 ${bgColorClass}`} />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">{area.nombre}</h4>
-                          <Badge variant={badgeVariant}>
-                            {area.nivel}
-                          </Badge>
+                {analysisResults.perfilNeurocognitivo.areasApoyo.map(
+                  (area, index) => {
+                    let bgColorClass = "bg-green-500";
+                    if (area.nivel === "Alto") bgColorClass = "bg-red-500";
+                    else if (area.nivel === "Medio")
+                      bgColorClass = "bg-yellow-500";
+
+                    let badgeVariant: any = "default";
+                    if (area.nivel === "Alto") badgeVariant = "destructive";
+                    else if (area.nivel === "Medio") badgeVariant = "secondary";
+
+                    return (
+                      <div
+                        key={`area-${area.nombre}-${index}`}
+                        className="flex items-start gap-3 p-4 rounded-lg bg-muted/50"
+                      >
+                        <div
+                          className={`w-3 h-3 rounded-full mt-2 ${bgColorClass}`}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium">{area.nombre}</h4>
+                            <Badge variant={badgeVariant}>{area.nivel}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {area.descripcion}
+                          </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">{area.descripcion}</p>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  }
+                )}
               </CardContent>
             </Card>
 
@@ -772,25 +930,36 @@ const PEIEngine = () => {
                   Preferencias de Aprendizaje
                 </CardTitle>
                 <CardDescription>
-                  Estilos de aprendizaje identificados y sus porcentajes de efectividad
+                  Estilos de aprendizaje identificados y sus porcentajes de
+                  efectividad
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {analysisResults.perfilNeurocognitivo.preferenciasAprendizaje.map((preferencia, index) => (
-                    <div key={`${preferencia.tipo}-${index}`} className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <preferencia.icono className="h-5 w-5 text-primary" />
+                  {analysisResults.perfilNeurocognitivo.preferenciasAprendizaje.map(
+                    (preferencia, index) => (
+                      <div
+                        key={`${preferencia.tipo}-${index}`}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <preferencia.icono className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium">{preferencia.tipo}</h4>
+                            <Progress
+                              value={preferencia.porcentaje}
+                              className="h-2 mt-1"
+                            />
+                          </div>
+                          <span className="text-sm font-medium">
+                            {preferencia.porcentaje}%
+                          </span>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{preferencia.tipo}</h4>
-                          <Progress value={preferencia.porcentaje} className="h-2 mt-1" />
-                        </div>
-                        <span className="text-sm font-medium">{preferencia.porcentaje}%</span>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -800,22 +969,31 @@ const PEIEngine = () => {
           <TabsContent value="recommendations" className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {analysisResults.recomendaciones.map((recomendacion, index) => (
-                <Card key={`${recomendacion.titulo}-${index}`} className="hover:shadow-glow transition-spring">
+                <Card
+                  key={`${recomendacion.titulo}-${index}`}
+                  className="hover:shadow-glow transition-spring"
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
                         <Badge variant="outline" className="mb-2">
                           {recomendacion.categoria}
                         </Badge>
-                        <CardTitle className="text-lg">{recomendacion.titulo}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {recomendacion.titulo}
+                        </CardTitle>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <Badge variant={recomendacion.prioridad === 'Alta' ? 'destructive' : 'secondary'}>
+                        <Badge
+                          variant={
+                            recomendacion.prioridad === "Alta"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
                           {recomendacion.prioridad}
                         </Badge>
-                        <Badge variant="outline">
-                          {recomendacion.impacto}
-                        </Badge>
+                        <Badge variant="outline">{recomendacion.impacto}</Badge>
                       </div>
                     </div>
                   </CardHeader>
@@ -846,11 +1024,15 @@ const PEIEngine = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h4 className="font-semibold text-primary">Estrategias de Estudio</h4>
+                    <h4 className="font-semibold text-primary">
+                      Estrategias de Estudio
+                    </h4>
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
-                        <span>Usar mapas mentales para organizar información</span>
+                        <span>
+                          Usar mapas mentales para organizar información
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
@@ -862,9 +1044,11 @@ const PEIEngine = () => {
                       </li>
                     </ul>
                   </div>
-                  
+
                   <div className="space-y-4">
-                    <h4 className="font-semibold text-primary">Herramientas Recomendadas</h4>
+                    <h4 className="font-semibold text-primary">
+                      Herramientas Recomendadas
+                    </h4>
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
@@ -895,7 +1079,8 @@ const PEIEngine = () => {
                   Arquitectura del PEI Engine
                 </CardTitle>
                 <CardDescription>
-                  Tecnología avanzada que potencia la individualización educativa
+                  Tecnología avanzada que potencia la individualización
+                  educativa
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -906,27 +1091,30 @@ const PEIEngine = () => {
                     </div>
                     <h4 className="font-semibold">Machine Learning</h4>
                     <p className="text-sm text-muted-foreground">
-                      Algoritmos de IA que aprenden de cada interacción para mejorar la personalización
+                      Algoritmos de IA que aprenden de cada interacción para
+                      mejorar la personalización
                     </p>
                   </div>
-                  
+
                   <div className="text-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center mx-auto">
                       <FileText className="h-6 w-6 text-secondary" />
                     </div>
                     <h4 className="font-semibold">OCR/NLP</h4>
                     <p className="text-sm text-muted-foreground">
-                      Procesamiento de documentos clínicos y académicos con AWS/Runware
+                      Procesamiento de documentos clínicos y académicos con
+                      AWS/Runware
                     </p>
                   </div>
-                  
+
                   <div className="text-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                       <Brain className="h-6 w-6 text-accent" />
                     </div>
                     <h4 className="font-semibold">Análisis Neurocognitivo</h4>
                     <p className="text-sm text-muted-foreground">
-                      Evaluación especializada de capacidades cognitivas y preferencias
+                      Evaluación especializada de capacidades cognitivas y
+                      preferencias
                     </p>
                   </div>
                 </div>
@@ -948,7 +1136,8 @@ const PEIEngine = () => {
                     <div>
                       <h4 className="font-medium">Encriptación End-to-End</h4>
                       <p className="text-sm text-muted-foreground">
-                        Todos los datos están protegidos con encriptación AES-256
+                        Todos los datos están protegidos con encriptación
+                        AES-256
                       </p>
                     </div>
                   </div>
@@ -957,7 +1146,8 @@ const PEIEngine = () => {
                     <div>
                       <h4 className="font-medium">Cumplimiento GDPR</h4>
                       <p className="text-sm text-muted-foreground">
-                        Totalmente compatible con regulaciones de protección de datos
+                        Totalmente compatible con regulaciones de protección de
+                        datos
                       </p>
                     </div>
                   </div>
@@ -1020,26 +1210,35 @@ const PEIEngine = () => {
                   APIs y Integraciones
                 </CardTitle>
                 <CardDescription>
-                  Conectividad con sistemas externos para una experiencia completa
+                  Conectividad con sistemas externos para una experiencia
+                  completa
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <h4 className="font-medium text-sm">AWS Services</h4>
-                    <p className="text-xs text-muted-foreground mt-1">OCR, NLP, ML</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      OCR, NLP, ML
+                    </p>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <h4 className="font-medium text-sm">Runware</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Procesamiento IA</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Procesamiento IA
+                    </p>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <h4 className="font-medium text-sm">Lingo.dev</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Modo Pictográfico</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Modo Pictográfico
+                    </p>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <h4 className="font-medium text-sm">n8n/Hookdeck</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Automatización</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Automatización
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1052,14 +1251,16 @@ const PEIEngine = () => {
           <BedrockDemo showTitle={true} />
         </div>
 
-
         {/* CTA Final */}
         <Card className="mt-12 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
           <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">¿Listo para experimentar el PEI Engine?</h2>
+            <h2 className="text-2xl font-bold mb-4">
+              ¿Listo para experimentar el PEI Engine?
+            </h2>
             <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Descubre cómo nuestro motor de individualización puede transformar tu experiencia de aprendizaje 
-              y acelerar tu progreso académico de manera personalizada.
+              Descubre cómo nuestro motor de individualización puede transformar
+              tu experiencia de aprendizaje y acelerar tu progreso académico de
+              manera personalizada.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/registro">
@@ -1078,7 +1279,7 @@ const PEIEngine = () => {
           </CardContent>
         </Card>
       </main>
-      
+
       <Footer />
     </div>
   );

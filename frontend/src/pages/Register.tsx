@@ -38,6 +38,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { logger } from "@/utils/logger";
 
 interface FormData {
   // Información personal
@@ -290,16 +291,16 @@ const Register = () => {
   // Helper to extract error message from error object
   const extractErrorMsg = (error: any): string => {
     // Log completo del error para debugging
-    console.error("Error completo:", error);
-    console.error("Error response:", error?.response);
-    console.error("Error response data:", error?.response?.data);
-    console.error("Error message:", error?.message);
-    console.error("Error code:", error?.code);
-    console.error("Error status:", error?.response?.status);
+    logger.error("Error completo:", error);
+    logger.error("Error response:", error?.response);
+    logger.error("Error response data:", error?.response?.data);
+    logger.error("Error message:", error?.message);
+    logger.error("Error code:", error?.code);
+    logger.error("Error status:", error?.response?.status);
 
     // Mostrar el stack trace si está disponible
     if (error?.stack) {
-      console.error("Error stack:", error.stack);
+      logger.error("Error stack:", error.stack);
     }
 
     // Intentar obtener mensaje de error del backend
@@ -392,7 +393,7 @@ const Register = () => {
       const { authService } = await import("@/services/neuroplanApi");
       const response = await authService.register(userData);
 
-      console.log("Respuesta del registro:", response); // Debug
+      logger.debug("Respuesta del registro:", response);
 
       // authService.register ya hace .then(res => res.data), así que response es el objeto directo
       const token = response?.accessToken || response?.token;
@@ -413,7 +414,7 @@ const Register = () => {
           "Usuario creado. Por favor inicia sesión."
         );
       } else {
-        console.warn(
+        logger.warn(
           "Registro aparentemente exitoso pero sin token ni usuario. Respuesta:",
           response
         );
@@ -421,9 +422,9 @@ const Register = () => {
         setIsSubmitting(false);
       }
     } catch (error: any) {
-      console.error("Error en registro:", error);
+      logger.error("Error en registro:", error);
       const errorMessage = extractErrorMsg(error);
-      console.error("Mensaje de error extraído:", errorMessage);
+      logger.error("Mensaje de error extraído:", errorMessage);
       setFormError(errorMessage);
       setIsSubmitting(false);
     }
