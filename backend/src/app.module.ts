@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_FILTER } from "@nestjs/core";
 import { HttpModule } from "./common/http/http.module";
 import { PeisModule } from "./modules/peis/peis.module";
 import { AwsModule } from "./modules/aws/aws.module";
@@ -11,6 +12,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
 import { ExtractModule } from "./extract/extract.module";
 import { AppController } from "./app.controller";
 import { StudentsModule } from "./modules/students/students.module";
+import { AllExceptionsFilter } from "./filters/all-exceptions.filter";
 
 @Module({
   imports: [
@@ -58,6 +60,11 @@ import { StudentsModule } from "./modules/students/students.module";
   ],
   controllers: [AppController],
   providers: [
+    // Global exception filter
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
     // Throttler global guard deshabilitado temporalmente
     // {
     //   provide: APP_GUARD,

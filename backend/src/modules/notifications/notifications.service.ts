@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { supabase } from '../../db';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
   async getUserNotifications(userId: string) {
     try {
       const { data, error } = await supabase
@@ -13,13 +14,15 @@ export class NotificationsService {
         .limit(50);
 
       if (error) {
-        console.error('Error getting user notifications:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error getting user notifications', errorStack);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error getting user notifications:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error getting user notifications', errorStack);
       return [];
     }
   }
@@ -46,13 +49,15 @@ export class NotificationsService {
         .single();
 
       if (error) {
-        console.error('Error sending notification:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error sending notification', errorStack);
         throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('Error sending notification:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error sending notification', errorStack);
       throw error;
     }
   }
@@ -68,13 +73,15 @@ export class NotificationsService {
         .single();
 
       if (error) {
-        console.error('Error marking notification as read:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error marking notification as read', errorStack);
         throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error marking notification as read', errorStack);
       throw error;
     }
   }
@@ -89,13 +96,15 @@ export class NotificationsService {
         .select();
 
       if (error) {
-        console.error('Error marking all notifications as read:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error marking all notifications as read', errorStack);
         throw error;
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error marking all notifications as read', errorStack);
       throw error;
     }
   }
@@ -109,13 +118,15 @@ export class NotificationsService {
         .eq('read', false);
 
       if (error) {
-        console.error('Error getting unread count:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error getting unread count', errorStack);
         return 0;
       }
 
       return count || 0;
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error getting unread count', errorStack);
       return 0;
     }
   }
@@ -129,13 +140,15 @@ export class NotificationsService {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error deleting notification:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error deleting notification', errorStack);
         throw error;
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error deleting notification', errorStack);
       throw error;
     }
   }

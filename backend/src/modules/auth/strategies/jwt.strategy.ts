@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, Logger } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { getUserById } from "../../../db";
@@ -12,6 +12,8 @@ export interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger(JwtStrategy.name);
+
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -40,7 +42,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         centerId: user.center_id,
       };
     } catch (error) {
-      console.error("Error validating JWT:", error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error("Error validating JWT", errorStack);
       throw new UnauthorizedException("User not authorized or inactive");
     }
   }

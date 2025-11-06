@@ -1,27 +1,6 @@
 version: "3.8"
 
 services:
-  # PostgreSQL Database (para desarrollo)
-  postgres:
-    image: postgres:15-alpine
-    container_name: neuroplan-postgres
-    environment:
-      POSTGRES_DB: neuroplan_dev
-      POSTGRES_USER: neuroplan
-      POSTGRES_PASSWORD: neuroplan_password_change_in_prod
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/setup-database.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U neuroplan"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - neuroplan-network
-
   # Ollama LLM Server
   ollama:
     image: ollama/ollama:latest
@@ -31,7 +10,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     environment:
-      - OLLAMA_HOST=0.0.0.0
+      OLLAMA_HOST: 0.0.0.0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
@@ -47,27 +26,37 @@ services:
       dockerfile: Dockerfile
     container_name: neuroplan-backend
     environment:
-      NODE_ENV: production
-      PORT: 3001
-      DATABASE_URL: postgresql://neuroplan:neuroplan_password_change_in_prod@postgres:5432/neuroplan_dev
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3001}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      OLLAMA_BASE_URL: http://ollama:11434
-      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:5173
+      SUPABASE_STRICT: ${SUPABASE_STRICT:-false}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:80}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
+      UPLOAD_PATH: ${UPLOAD_PATH:-./uploads}
+      AWS_REGION: ${AWS_REGION:-eu-west-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-mock}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-mock}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-neuroplan-demo-bucket}
     ports:
       - "3001:3001"
     depends_on:
-      postgres:
-        condition: service_healthy
       ollama:
         condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
     networks:
       - neuroplan-network
     restart: unless-stopped
@@ -109,8 +98,6 @@ services:
       - production
 
 volumes:
-  postgres_data:
-    driver: local
   ollama_data:
     driver: local
 

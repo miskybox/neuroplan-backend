@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -7,11 +7,13 @@ import { supabase, getUserByEmail, createUser, getUserById } from '../../db';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(private readonly jwtService: JwtService) {}
 
   async register(dto: RegisterDto) {
     try {
-      console.log('🔐 Registrando usuario con Supabase Auth');
+      this.logger.log('Registrando usuario con Supabase Auth');
       
       // Verificar si el email ya existe en nuestra tabla de usuarios
       const existingUser = await getUserByEmail(dto.email);
@@ -51,12 +53,12 @@ export class AuthService {
       });
 
       if (authError) {
-        console.error('Error en Supabase Auth:', JSON.stringify(authError, null, 2));
+        this.logger.error(`Error en Supabase Auth: ${JSON.stringify(authError, null, 2)}`);
         throw new BadRequestException('Error al crear usuario: ' + authError.message);
       }
 
       if (!authData.user) {
-        console.error('Supabase Auth no devolvió usuario:', JSON.stringify(authData, null, 2));
+        this.logger.error(`Supabase Auth no devolvió usuario: ${JSON.stringify(authData, null, 2)}`);
         throw new BadRequestException('No se pudo crear el usuario');
       }
 
@@ -96,7 +98,8 @@ export class AuthService {
         authUser: authData.user, // Información adicional de Supabase Auth
       };
     } catch (error) {
-      console.error('Error en registro:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error en registro', errorStack);
       if (error instanceof ConflictException || error instanceof BadRequestException) {
         throw error;
       }
@@ -106,8 +109,8 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     try {
-      console.log('🔐 Autenticando usuario con Supabase Auth');
-      
+      this.logger.log('Autenticando usuario con Supabase Auth');
+
       // Autenticar con Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: dto.email,
@@ -115,7 +118,8 @@ export class AuthService {
       });
 
       if (authError) {
-        console.error('Error en Supabase Auth:', authError);
+        const errorStack = authError instanceof Error ? authError.stack : String(authError);
+        this.logger.error('Error en Supabase Auth', errorStack);
         throw new UnauthorizedException('Credenciales inválidas');
       }
 
@@ -152,7 +156,8 @@ export class AuthService {
         authUser: authData.user, // Información adicional de Supabase Auth
       };
     } catch (error) {
-      console.error('Error en login:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error en login', errorStack);
       if (error instanceof UnauthorizedException) {
         throw error;
       }
@@ -168,7 +173,8 @@ export class AuthService {
       }
       return user;
     } catch (error) {
-      console.error('Error validando usuario:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error validando usuario', errorStack);
       throw new UnauthorizedException('Usuario no autorizado');
     }
   }
@@ -189,7 +195,8 @@ export class AuthService {
         active: user.active,
       };
     } catch (error) {
-      console.error('Error obteniendo usuario:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error obteniendo usuario', errorStack);
       throw new UnauthorizedException('Usuario no autorizado');
     }
   }
@@ -199,12 +206,14 @@ export class AuthService {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error cerrando sesión:', error);
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error('Error cerrando sesión', errorStack);
         throw new BadRequestException('Error al cerrar sesión');
       }
       return { message: 'Sesión cerrada correctamente' };
     } catch (error) {
-      console.error('Error en logout:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error en logout', errorStack);
       throw new BadRequestException('Error interno del servidor');
     }
   }
@@ -218,7 +227,8 @@ export class AuthService {
       }
       return data.user;
     } catch (error) {
-      console.error('Error verificando token:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error verificando token', errorStack);
       throw new UnauthorizedException('Token inválido');
     }
   }

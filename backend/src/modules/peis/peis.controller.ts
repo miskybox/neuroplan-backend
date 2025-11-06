@@ -124,8 +124,11 @@ export class PeisController {
     },
     @CurrentUser() user: any,
   ) {
-    // Llama a generatePEI del servicio
-    return this.peisService.generatePEI(diagnosisData);
+    // Llama a generatePEI del servicio con el campo createdBy requerido
+    return this.peisService.generatePEI({
+      ...diagnosisData,
+      createdBy: user.id || user.userId,
+    });
   }
 
   @Get()
@@ -286,13 +289,34 @@ Cambia el estado de un PEI en el workflow de aprobación.
   async updatePeiStatus(
     @Param('id') id: string,
     @Body() body: { status: string },
+    @CurrentUser() user: any,
   ) {
     if (!body.status) {
       throw new BadRequestException('Estado requerido');
     }
 
-  // No existe updatePeiStatus, se usa updatePEI
-  return this.peisService.updatePEI(id, { status: body.status });
+    // Validar que el status sea válido
+    const validStatuses = ['DRAFT', 'REVIEW', 'APPROVED', 'ACTIVE', 'ARCHIVED'];
+    if (!validStatuses.includes(body.status)) {
+      throw new BadRequestException(
+        `Estado no válido. Debe ser uno de: ${validStatuses.join(', ')}`
+      );
+    }
+
+    try {
+      const userId = user.id || user.userId;
+      const updatedPei = await this.peisService.updatePEI(id, {
+        status: body.status as 'DRAFT' | 'REVIEW' | 'APPROVED' | 'ACTIVE' | 'ARCHIVED',
+        approved_by: body.status === 'APPROVED' ? userId : undefined,
+      });
+
+      return updatedPei;
+    } catch (error: any) {
+      if (error.message === 'PEI no encontrado') {
+        throw new NotFoundException('PEI no encontrado');
+      }
+      throw new BadRequestException(`Error al actualizar estado: ${error.message}`);
+    }
   }
 
   @Get(':id/pdf')

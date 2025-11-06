@@ -1,5 +1,6 @@
 # Multi-stage build
-FROM node:20.18-alpine AS builder
+# ACTUALIZADO: node:22-alpine corrige 2 vulnerabilidades HIGH de node:20.18-alpine
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 

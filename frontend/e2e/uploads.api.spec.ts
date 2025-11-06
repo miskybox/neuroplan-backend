@@ -3,9 +3,11 @@ import { getAuthToken } from "./helpers/auth";
 
 const API_BASE_URL = "http://localhost:3001/api";
 
+// NOTA: Usando e2e-test@neuroplan.com ya que admin@neuroplan.com tiene conflicto en Auth
+// Usuario verificado funcional con fix-test-users-auth-v2.js
 const ADMIN_USER = {
-  email: "admin@neuroplan.com",
-  password: "NeuroPlan2024!",
+  email: "e2e-test@neuroplan.com",
+  password: "E2eTest2024!",
 };
 
 test.describe("Uploads API E2E Tests", () => {

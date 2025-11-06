@@ -1,13 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import CTA from './CTA';
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { CTA as Cta } from "./CTA";
 
-describe('CTA component', () => {
-  it('renderiza título y botón de acción', () => {
+describe("CTA component", () => {
+  it("renderiza título y botón de acción", () => {
     render(
       <MemoryRouter>
-        <CTA />
+        <Cta />
       </MemoryRouter>
     );
 
@@ -16,7 +16,7 @@ describe('CTA component', () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole('button', { name: /Crear mi Perfil NeuroAcadémico/i })
+      screen.getByRole("button", { name: /Crear mi Perfil NeuroAcadémico/i })
     ).toBeInTheDocument();
   });
 });

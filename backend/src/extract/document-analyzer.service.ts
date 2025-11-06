@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { LlmService } from '../llm/llm.service';
 import { ExtractService } from './extract.service';
 
 @Injectable()
 export class DocumentAnalyzerService {
+  private readonly logger = new Logger(DocumentAnalyzerService.name);
+
   constructor(
     private readonly extractService: ExtractService,
     private readonly llmService: LlmService,
@@ -42,7 +44,8 @@ export class DocumentAnalyzerService {
       const analysisResult = await this.llmService.generateText(analysisPrompt);
       return JSON.parse(analysisResult);
     } catch (error) {
-      console.error('Error al analizar documento con IA:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error al analizar documento con IA', errorStack);
       // Devolver un resultado parcial en caso de error
       return {
         diagnostico: "No se pudo determinar",
@@ -89,7 +92,8 @@ export class DocumentAnalyzerService {
       const suggestionsResult = await this.llmService.generateText(suggestionsPrompt);
       return JSON.parse(suggestionsResult);
     } catch (error) {
-      console.error('Error al generar sugerencias para PEI:', error);
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error al generar sugerencias para PEI', errorStack);
       return {
         objetivos: [
           {

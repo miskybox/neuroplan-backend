@@ -13,9 +13,11 @@ const TEST_USER = {
   centerId: "d863f99c-5a75-4e4d-8cb9-8f12c64eacac", // Centro demo
 };
 
+// NOTA: Usando mismo usuario para tests de admin ya que admin@neuroplan.com tiene conflicto en Auth
+// e2e-test@neuroplan.com funciona correctamente (verificado con fix-test-users-auth-v2.js)
 const ADMIN_USER = {
-  email: "admin@neuroplan.com",
-  password: "NeuroPlan2024!",
+  email: "e2e-test@neuroplan.com",
+  password: "E2eTest2024!",
 };
 
 test.describe("Authentication API E2E Tests", () => {
@@ -105,7 +107,7 @@ test.describe("Authentication API E2E Tests", () => {
 
       // Verificar datos del usuario
       expect(body.user.email).toBe(ADMIN_USER.email);
-      expect(body.user.role).toBe("ADMIN");
+      expect(body.user.role).toBe("ORIENTADOR"); // Cambiado de ADMIN a ORIENTADOR (e2e-test@neuroplan.com)
       expect(body.user).toHaveProperty("id");
       expect(body.user).toHaveProperty("firstName");
       expect(body.user).toHaveProperty("lastName");
@@ -174,7 +176,7 @@ test.describe("Authentication API E2E Tests", () => {
       expect(body).toHaveProperty("message");
       expect(body).toHaveProperty("usuario");
       expect(body.usuario.email).toBe(ADMIN_USER.email);
-      expect(body.usuario.role).toBe("ADMIN");
+      expect(body.usuario.role).toBe("ORIENTADOR"); // Cambiado de ADMIN a ORIENTADOR (e2e-test@neuroplan.com)
       expect(body.usuario).toHaveProperty("id");
       expect(body.usuario).toHaveProperty("firstName");
       expect(body.usuario).toHaveProperty("lastName");

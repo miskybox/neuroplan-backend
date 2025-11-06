@@ -1,5 +1,6 @@
 # Multi-stage build para optimizar tamaño de imagen
-FROM node:20.18-alpine AS builder
+# ACTUALIZADO: node:22-alpine corrige 2 vulnerabilidades HIGH de node:20.18-alpine
+FROM node:22-alpine AS builder
 
 # Directorio de trabajo
 WORKDIR /app
@@ -19,7 +20,8 @@ COPY src ./src
 RUN npm run build
 
 # Etapa de producción
-FROM node:20.18-alpine
+# ACTUALIZADO: node:22-alpine corrige 2 vulnerabilidades HIGH de node:20.18-alpine
+FROM node:22-alpine
 
 # Variables de entorno para producción
 ENV NODE_ENV=production

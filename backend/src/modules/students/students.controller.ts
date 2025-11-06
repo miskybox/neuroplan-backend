@@ -48,10 +48,17 @@ export class StudentsController {
 
       if (error) throw new BadRequestException(error.message);
 
+      // Transformar datos para compatibilidad
+      const transformedStudents = (students || []).map((student: any) => ({
+        ...student,
+        first_name: student.persons?.first_name || null,
+        last_name: student.persons?.last_name || null,
+      }));
+
       return {
         success: true,
-        students: students || [],
-        count: students?.length || 0,
+        students: transformedStudents,
+        count: transformedStudents.length,
       };
     } catch (error) {
       console.error("Error getting students:", error);
@@ -71,7 +78,19 @@ export class StudentsController {
     const { data, error } = await this.databaseService
       .getClient()
       .from("students")
-      .select("*")
+      .select(`
+        *,
+        persons!person_id (
+          id,
+          first_name,
+          last_name
+        ),
+        centers!center_id (
+          id,
+          name,
+          address
+        )
+      `)
       .eq("id", id)
       .eq("created_by", userId)
       .single();
@@ -79,7 +98,14 @@ export class StudentsController {
     if (error) throw new BadRequestException(error.message);
     if (!data) throw new NotFoundException("Estudiante no encontrado");
 
-    return { success: true, student: data };
+    // Transformar datos para compatibilidad
+    const student = {
+      ...data,
+      first_name: data.persons?.first_name || null,
+      last_name: data.persons?.last_name || null,
+    };
+
+    return { success: true, student };
   }
 
   @Post()
@@ -108,10 +134,32 @@ export class StudentsController {
   async create(@CurrentUser() user: any, @Body() studentDto: StudentDto) {
     try {
       const userId = user.id || user.userId;
+      
+      // Validar campos requeridos
+      if (!studentDto.first_name || !studentDto.last_name) {
+        throw new BadRequestException('first_name y last_name son requeridos');
+      }
+      
+      // Crear persona primero
+      const { data: person, error: personError } = await this.databaseService
+        .getClient()
+        .from('persons')
+        .insert({
+          first_name: studentDto.first_name,
+          last_name: studentDto.last_name,
+        })
+        .select()
+        .single();
+
+      if (personError) {
+        throw new BadRequestException('Error al crear persona: ' + personError.message);
+      }
+
+      // Crear estudiante con person_id (esquema normalizado: solo person_id, center_id, created_by)
       const newStudent = {
-        ...studentDto,
+        person_id: person.id,
+        center_id: studentDto.center_id || null,
         created_by: userId,
-        created_at: new Date().toISOString(),
       };
 
       const { data, error } =
@@ -119,9 +167,18 @@ export class StudentsController {
 
       if (error) throw new BadRequestException(error.message);
 
+      // Transformar respuesta para compatibilidad
+      const studentResponse = {
+        ...data,
+        first_name: data.persons?.first_name || studentDto.first_name,
+        last_name: data.persons?.last_name || studentDto.last_name,
+        // Nota: grade, parent_email, etc. ya no existen en el esquema normalizado
+        // Si se necesitan, deberían guardarse en otra tabla o en la tabla persons
+      };
+
       return {
         success: true,
-        student: data,
+        student: studentResponse,
         message: "Estudiante creado correctamente",
       };
     } catch (error) {
@@ -145,35 +202,82 @@ export class StudentsController {
     const userId = user.id || user.userId;
 
     // Verificar que el estudiante pertenece al usuario
-    const { data: existingStudent } = await this.databaseService
+    const { data: existingStudent, error: fetchError } = await this.databaseService
       .getClient()
       .from("students")
-      .select("*")
+      .select(`
+        *,
+        persons!person_id (
+          id,
+          first_name,
+          last_name
+        )
+      `)
       .eq("id", id)
       .eq("created_by", userId)
       .single();
 
-    if (!existingStudent) {
+    if (fetchError || !existingStudent) {
       throw new NotFoundException("Estudiante no encontrado");
+    }
+
+    // Si hay cambios en first_name o last_name, actualizar la persona
+    if (studentDto.first_name || studentDto.last_name) {
+      const personId = existingStudent.person_id;
+      if (personId) {
+        const personUpdate: any = {};
+        if (studentDto.first_name) personUpdate.first_name = studentDto.first_name;
+        if (studentDto.last_name) personUpdate.last_name = studentDto.last_name;
+
+        await this.databaseService
+          .getClient()
+          .from("persons")
+          .update(personUpdate)
+          .eq("id", personId);
+      }
+    }
+
+    // Actualizar estudiante (solo campos permitidos)
+    const studentUpdate: any = {
+      updated_at: new Date().toISOString(),
+    };
+    if (studentDto.center_id !== undefined) {
+      studentUpdate.center_id = studentDto.center_id;
     }
 
     const { data, error } = await this.databaseService
       .getClient()
       .from("students")
-      .update({
-        ...studentDto,
-        updated_at: new Date().toISOString(),
-      })
+      .update(studentUpdate)
       .eq("id", id)
       .eq("created_by", userId)
-      .select()
+      .select(`
+        *,
+        persons!person_id (
+          id,
+          first_name,
+          last_name
+        ),
+        centers!center_id (
+          id,
+          name,
+          address
+        )
+      `)
       .single();
 
     if (error) throw new BadRequestException(error.message);
 
+    // Transformar datos para compatibilidad
+    const student = {
+      ...data,
+      first_name: data.persons?.first_name || null,
+      last_name: data.persons?.last_name || null,
+    };
+
     return {
       success: true,
-      student: data,
+      student,
       message: "Estudiante actualizado correctamente",
     };
   }

@@ -7,24 +7,31 @@ type AnyObject = Record<string, any>;
 export class PeisService {
   /**
    * Genera un PEI y lo guarda en la tabla `public.peis`
-   * - Esquema real: id, user_id, student_id, pei(jsonb), pdf_key, created_at, updated_at
-   * - Guardamos TODO el contenido dentro de `pei` (jsonb)
+   * - Esquema normalizado: id, student_id, created_by, title, summary, diagnosis
    */
   async generatePEI(diagnosisData: {
     studentId: string;
-    reportId?: string;       // opcional: puedes guardarlo dentro de pei.meta
+    reportId?: string;
     diagnosis: string;
-    objectives: any[];
-    adaptations: any[];
-    strategies: any[];
-    evaluation: any[];
-    timeline: any[];
+    objectives?: any[];
+    adaptations?: any[];
+    strategies?: any[];
+    evaluation?: any[];
+    timeline?: any[];
+    createdBy: string; // usuario que crea el PEI
   }) {
     try {
-      // 1) Obtener info del estudiante (ajusta nombres de columnas a tu tabla `students`)
+      // 1) Obtener info del estudiante con relaciones
       const { data: student, error: studentError } = await supabase
         .from('students')
-        .select('*')
+        .select(`
+          *,
+          persons!person_id (
+            id,
+            first_name,
+            last_name
+          )
+        `)
         .eq('id', diagnosisData.studentId)
         .single();
 
@@ -33,44 +40,21 @@ export class PeisService {
         throw new Error('Estudiante no encontrado');
       }
 
-      // 2) Construir payload JSONB que se guardará en `pei`
-      const peiPayload: AnyObject = {
-        student: {
-          id: diagnosisData.studentId,
-          firstName: student.first_name ?? '',
-          lastName:  student.last_name  ?? '',
-          grade:     student.grade      ?? null,
-        },
-        diagnosis:     diagnosisData.diagnosis,
-        objectives:    diagnosisData.objectives || [],
-        adaptations:   diagnosisData.adaptations || [],
-        strategies:    diagnosisData.strategies || [],
-        evaluation:    diagnosisData.evaluation || [],
-        timeline:      diagnosisData.timeline || [],
-        meta: {
-          generatedAt: new Date().toISOString(),
-          reportId: diagnosisData.reportId ?? null,
-          // guarda otros metadatos aquí si lo necesitas
-        },
-        // campos opcionales que te pueden venir bien para vistas
-        summary: `Plan Educativo Individualizado para ${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
-        title:   `PEI - ${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
-        status: 'DRAFT',
-      };
+      // 2) Construir título y resumen basados en el estudiante
+      const firstName = student.persons?.first_name ?? '';
+      const lastName = student.persons?.last_name ?? '';
+      const title = `PEI - ${firstName} ${lastName}`.trim();
+      const summary = `Plan Educativo Individualizado para ${firstName} ${lastName}`.trim();
 
-      // 3) Determinar el usuario creador
-      //    Si en tu flujo el usuario autenticado llega por middleware, puedes pasarlo por parámetro
-      //    Aquí reciclo el 'created_by' del student si existe; si no, 'anon'
-      const userId = student.created_by ?? 'anon';
-
-      // 4) Insertar en la tabla `peis`
+      // 3) Insertar en la tabla `peis` (esquema normalizado: solo title, summary, diagnosis)
       const { data, error } = await supabase
         .from('peis')
         .insert({
-          user_id: userId,                          // quién crea el PEI
-          student_id: diagnosisData.studentId,      // estudiante asociado
-          pei: peiPayload,                          // JSONB completo
-          // pdf_key: null                           // lo rellenarás cuando subas el PDF a Storage
+          student_id: diagnosisData.studentId,
+          created_by: diagnosisData.createdBy,
+          title: title,
+          summary: summary,
+          diagnosis: diagnosisData.diagnosis,
         })
         .select()
         .single();
@@ -133,28 +117,38 @@ export class PeisService {
 
   /**
    * Actualiza (parcialmente) un PEI
-   * - Puedes actualizar `pei` completo o campos concretos dentro de ese JSON (desde el front)
-   * - Para MVP, asumimos que nos envías un objeto con la nueva estructura del JSON
+   * Esquema normalizado: title, summary, diagnosis, status
    */
-  async updatePEI(peiId: string, updates: AnyObject) {
+  async updatePEI(peiId: string, updates: {
+    title?: string;
+    summary?: string;
+    diagnosis?: string;
+    status?: 'DRAFT' | 'REVIEW' | 'APPROVED' | 'ACTIVE' | 'ARCHIVED';
+    approved_by?: string;
+  }) {
     try {
-      // Si te envían `status` o similares de nivel raíz (no existe columna),
-      // muévelos dentro de `pei`:
       const row = await this.getPEIById(peiId);
       if (!row) throw new Error('PEI no encontrado');
 
-      const newPei = {
-        ...row.pei,
-        ...(updates?.pei || updates), // si te pasan `pei: {...}` o directamente campos a fusionar
-        meta: {
-          ...row.pei?.meta,
-          updatedAt: new Date().toISOString(),
-        },
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
       };
+
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.summary !== undefined) updateData.summary = updates.summary;
+      if (updates.diagnosis !== undefined) updateData.diagnosis = updates.diagnosis;
+      if (updates.status !== undefined) {
+        updateData.status = updates.status;
+        // Si se aprueba, registrar fecha y usuario
+        if (updates.status === 'APPROVED' && updates.approved_by) {
+          updateData.approved_at = new Date().toISOString();
+          updateData.approved_by = updates.approved_by;
+        }
+      }
 
       const { data, error } = await supabase
         .from('peis')
-        .update({ pei: newPei })
+        .update(updateData)
         .eq('id', peiId)
         .select()
         .single();
@@ -199,7 +193,7 @@ export class PeisService {
       const { data, error } = await supabase
         .from('peis')
         .select('*')
-        .eq('user_id', userId)
+        .eq('created_by', userId)
         .order('created_at', { ascending: false });
 
       if (error) {
