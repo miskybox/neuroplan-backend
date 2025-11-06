@@ -15,11 +15,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name);
 
   constructor() {
+    const secret = process.env.JWT_SECRET;
+    
+    if (!secret) {
+      throw new Error(
+        'JWT_SECRET must be defined in environment variables. ' +
+        'Please check your .env file and ensure JWT_SECRET is set.'
+      );
+    }
+
+    if (secret.length < 32) {
+      throw new Error(
+        'JWT_SECRET must be at least 32 characters long for security reasons.'
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        process.env.JWT_SECRET || "neuroplan-secret-key-change-in-production",
+      secretOrKey: secret,
     });
   }
 

@@ -13,13 +13,15 @@ import { ExtractModule } from "./extract/extract.module";
 import { AppController } from "./app.controller";
 import { StudentsModule } from "./modules/students/students.module";
 import { AllExceptionsFilter } from "./filters/all-exceptions.filter";
+import { validateEnv } from "./config/env.validation";
 
 @Module({
   imports: [
-    // Configuración de variables de entorno
+    // Configuración de variables de entorno con validación
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ".env",
+      validate: validateEnv,
     }),
 
     // Rate limiting deshabilitado temporalmente para tests E2E

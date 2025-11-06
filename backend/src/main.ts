@@ -5,6 +5,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import { testSupabaseConnection } from "./db";
+import { validateRequiredEnvVars } from "./config/validate-env";
 
 // Manejo de errores globales (NO tumbar el server en prod por cosas recuperables)
 process.on("uncaughtException", (error) => {
@@ -15,6 +16,16 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 async function bootstrap(): Promise<void> {
+  // 0) VALIDAR VARIABLES DE ENTORNO CRÍTICAS ANTES DE INICIAR
+  try {
+    validateRequiredEnvVars();
+  } catch (error) {
+    console.error("\n❌ Error de validación de variables de entorno:");
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error("\nPor favor, revisa tu archivo .env y asegúrate de que todas las variables requeridas estén configuradas.\n");
+    process.exit(1);
+  }
+
   // 1) PROBAR SUPABASE PERO NO BLOQUEAR EL ARRANQUE (salvo modo estricto)
   const strict =
     String(process.env.SUPABASE_STRICT || "false").toLowerCase() === "true";

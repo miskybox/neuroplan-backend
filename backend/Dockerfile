@@ -10,8 +10,8 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 
-# Instalar dependencias
-RUN npm ci --only=production && npm cache clean --force
+# Instalar dependencias de desarrollo para poder compilar TypeScript
+RUN npm ci && npm cache clean --force
 
 # Copiar código fuente
 COPY src ./src
