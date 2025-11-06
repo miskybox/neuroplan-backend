@@ -1,44 +1,50 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Logger } from '@nestjs/common';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { Logger } from "@nestjs/common";
 
-const logger = new Logger('Database');
+const logger = new Logger("Database");
 
 // Configuración de Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase configuration. Please check your environment variables.');
+  throw new Error(
+    "Missing Supabase configuration. Please check your environment variables."
+  );
 }
 
 // Cliente de Supabase con service role key (para operaciones del backend)
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+export const supabase: SupabaseClient = createClient(
+  supabaseUrl,
+  supabaseServiceKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
   }
-});
+);
 
 // Cliente de Supabase con anon key (para operaciones del frontend)
 export const supabaseAnon: SupabaseClient = createClient(
-  supabaseUrl, 
-  process.env.SUPABASE_ANON_KEY || ''
+  supabaseUrl,
+  process.env.SUPABASE_ANON_KEY || ""
 );
 
 // Función para verificar conexión
 export async function testSupabaseConnection(): Promise<boolean> {
   try {
-    const { error } = await supabase.from('users').select('count').limit(1);
+    const { error } = await supabase.from("users").select("count").limit(1);
     if (error) {
       const errorStack = error instanceof Error ? error.stack : String(error);
-      logger.error('Supabase connection error', errorStack);
+      logger.error("Supabase connection error", errorStack);
       return false;
     }
-    logger.log('Supabase connection successful');
+    logger.log("Supabase connection successful");
     return true;
   } catch (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Supabase connection failed', errorStack);
+    logger.error("Supabase connection failed", errorStack);
     return false;
   }
 }
@@ -46,8 +52,9 @@ export async function testSupabaseConnection(): Promise<boolean> {
 // Función para obtener usuario por ID (con relaciones)
 export async function getUserById(userId: string) {
   const { data, error } = await supabase
-    .from('users')
-    .select(`
+    .from("users")
+    .select(
+      `
       *,
       persons!person_id (
         id,
@@ -63,16 +70,17 @@ export async function getUserById(userId: string) {
         name,
         address
       )
-    `)
-    .eq('id', userId)
+    `
+    )
+    .eq("id", userId)
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error getting user', errorStack);
+    logger.error("Error getting user", errorStack);
     return null;
   }
-  
+
   // Transformar datos para compatibilidad con código existente
   if (data) {
     return {
@@ -82,15 +90,16 @@ export async function getUserById(userId: string) {
       role: data.roles?.name || null,
     };
   }
-  
+
   return data;
 }
 
 // Función para obtener usuario por email (con relaciones)
 export async function getUserByEmail(email: string) {
   const { data, error } = await supabase
-    .from('users')
-    .select(`
+    .from("users")
+    .select(
+      `
       *,
       persons!person_id (
         id,
@@ -106,16 +115,17 @@ export async function getUserByEmail(email: string) {
         name,
         address
       )
-    `)
-    .eq('email', email)
+    `
+    )
+    .eq("email", email)
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error getting user by email', errorStack);
+    logger.error("Error getting user by email", errorStack);
     return null;
   }
-  
+
   // Transformar datos para compatibilidad con código existente
   if (data) {
     return {
@@ -125,7 +135,7 @@ export async function getUserByEmail(email: string) {
       role: data.roles?.name || null,
     };
   }
-  
+
   return data;
 }
 
@@ -135,34 +145,63 @@ export async function createPerson(personData: {
   last_name?: string;
 }) {
   const { data, error } = await supabase
-    .from('persons')
+    .from("persons")
     .insert(personData)
     .select()
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error creating person', errorStack);
+    logger.error("Error creating person", errorStack);
     throw error;
   }
-  
+
   return data;
 }
 
-// Función para obtener rol por nombre
+// Función para obtener rol por nombre, creándolo si no existe
 export async function getRoleByName(roleName: string) {
+  // Primero intentar obtener el rol
   const { data, error } = await supabase
-    .from('roles')
-    .select('*')
-    .eq('name', roleName)
+    .from("roles")
+    .select("*")
+    .eq("name", roleName)
     .single();
-  
+
+  // Si el rol existe, retornarlo
+  if (data && !error) {
+    return data;
+  }
+
+  // Si no existe y el error es "not found", intentar crearlo
+  if (
+    error &&
+    (error.code === "PGRST116" || error.message?.includes("No rows"))
+  ) {
+    logger.warn(`Role '${roleName}' not found, attempting to create it...`);
+
+    const { data: newRole, error: createError } = await supabase
+      .from("roles")
+      .insert({ name: roleName })
+      .select()
+      .single();
+
+    if (createError) {
+      logger.error(`Error creating role '${roleName}': ${createError.message}`);
+      return null;
+    }
+
+    logger.log(`Role '${roleName}' created successfully`);
+    return newRole;
+  }
+
+  // Otro tipo de error
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error getting role', errorStack);
+    logger.error("Error getting role", errorStack);
     return null;
   }
-  
+
   return data;
 }
 
@@ -173,7 +212,7 @@ export async function createUser(userData: {
   role: string; // nombre del rol
   first_name?: string;
   last_name?: string;
-  center_id?: string;
+  center_id?: string | null; // Permitir null
 }) {
   // 1. Crear persona primero
   let personId: string | null = null;
@@ -188,7 +227,9 @@ export async function createUser(userData: {
   // 2. Obtener role_id
   const role = await getRoleByName(userData.role);
   if (!role) {
-    throw new Error(`Role ${userData.role} not found`);
+    const errorMsg = `Role '${userData.role}' not found in database. Available roles must be created first.`;
+    logger.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
   // 3. Crear usuario
@@ -201,9 +242,10 @@ export async function createUser(userData: {
   };
 
   const { data, error } = await supabase
-    .from('users')
+    .from("users")
     .insert(userInsert)
-    .select(`
+    .select(
+      `
       *,
       persons!person_id (
         id,
@@ -219,15 +261,28 @@ export async function createUser(userData: {
         name,
         address
       )
-    `)
+    `
+    )
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error creating user', errorStack);
-    throw error;
+    logger.error("Error creating user", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      stack: errorStack,
+    });
+    // Crear un error más descriptivo
+    const errorMessage = error.message || "Error desconocido al crear usuario";
+    const detailedError = new Error(
+      `Error al crear usuario en la base de datos: ${errorMessage}`
+    );
+    (detailedError as any).originalError = error;
+    throw detailedError;
   }
-  
+
   // Transformar datos para compatibilidad
   if (data) {
     return {
@@ -237,33 +292,34 @@ export async function createUser(userData: {
       role: data.roles?.name || null,
     };
   }
-  
+
   return data;
 }
 
 // Función para actualizar usuario
 export async function updateUser(userId: string, updates: any) {
   const { data, error } = await supabase
-    .from('users')
+    .from("users")
     .update(updates)
-    .eq('id', userId)
+    .eq("id", userId)
     .select()
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error updating user', errorStack);
+    logger.error("Error updating user", errorStack);
     throw error;
   }
-  
+
   return data;
 }
 
 // Función para obtener estudiantes por usuario (con relaciones)
 export async function getStudentsByUser(userId: string) {
   const { data, error } = await supabase
-    .from('students')
-    .select(`
+    .from("students")
+    .select(
+      `
       *,
       persons!person_id (
         id,
@@ -275,18 +331,19 @@ export async function getStudentsByUser(userId: string) {
         name,
         address
       )
-    `)
-    .eq('created_by', userId)
-    .order('created_at', { ascending: false });
-  
+    `
+    )
+    .eq("created_by", userId)
+    .order("created_at", { ascending: false });
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error getting students', errorStack);
+    logger.error("Error getting students", errorStack);
     return [];
   }
-  
+
   // Transformar datos para compatibilidad
-  return (data || []).map(student => ({
+  return (data || []).map((student) => ({
     ...student,
     first_name: student.persons?.first_name || null,
     last_name: student.persons?.last_name || null,
@@ -320,9 +377,10 @@ export async function createStudent(studentData: {
   };
 
   const { data, error } = await supabase
-    .from('students')
+    .from("students")
     .insert(studentInsert)
-    .select(`
+    .select(
+      `
       *,
       persons!person_id (
         id,
@@ -334,15 +392,16 @@ export async function createStudent(studentData: {
         name,
         address
       )
-    `)
+    `
+    )
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error creating student', errorStack);
+    logger.error("Error creating student", errorStack);
     throw error;
   }
-  
+
   // Transformar datos para compatibilidad
   if (data) {
     return {
@@ -351,24 +410,24 @@ export async function createStudent(studentData: {
       last_name: data.persons?.last_name || null,
     };
   }
-  
+
   return data;
 }
 
 // Función para obtener PEIs por estudiante
 export async function getPEIsByStudent(studentId: string) {
   const { data, error } = await supabase
-    .from('peis')
-    .select('*')
-    .eq('student_id', studentId)
-    .order('created_at', { ascending: false });
-  
+    .from("peis")
+    .select("*")
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false });
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error getting PEIs', errorStack);
+    logger.error("Error getting PEIs", errorStack);
     return [];
   }
-  
+
   return data;
 }
 
@@ -381,7 +440,7 @@ export async function createPEI(peiData: {
   created_by: string;
 }) {
   const { data, error } = await supabase
-    .from('peis')
+    .from("peis")
     .insert({
       student_id: peiData.student_id,
       created_by: peiData.created_by,
@@ -391,13 +450,13 @@ export async function createPEI(peiData: {
     })
     .select()
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error creating PEI', errorStack);
+    logger.error("Error creating PEI", errorStack);
     throw error;
   }
-  
+
   return data;
 }
 
@@ -410,17 +469,17 @@ export async function createActivityLog(logData: {
   details?: any;
 }) {
   const { data, error } = await supabase
-    .from('activity_logs')
+    .from("activity_logs")
     .insert(logData)
     .select()
     .single();
-  
+
   if (error) {
     const errorStack = error instanceof Error ? error.stack : String(error);
-    logger.error('Error creating activity log', errorStack);
+    logger.error("Error creating activity log", errorStack);
     throw error;
   }
-  
+
   return data;
 }
 
@@ -428,11 +487,12 @@ export async function createActivityLog(logData: {
 export default supabase;
 
 // Test de conexión a Supabase al arrancar el servidor
-// IIFE requerido: NestJS usa module: commonjs que no soporta top-level await
-// eslint-disable-next-line sonarjs/no-async-iife
 if (require.main === module) {
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  void (async () => {
-    await testSupabaseConnection();
+  (async () => {
+    try {
+      await testSupabaseConnection();
+    } catch (error) {
+      logger.error("Failed to test connection", error);
+    }
   })();
 }
