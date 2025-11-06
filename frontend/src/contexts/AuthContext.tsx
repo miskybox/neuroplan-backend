@@ -1,5 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { authService } from '../services/neuroplanApi';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useMemo,
+} from "react";
+import { authService } from "../services/neuroplanApi";
+import { logger } from "@/utils/logger";
 
 interface User {
   id: string;
@@ -39,17 +47,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         // Verificar si hay un token válido en localStorage
-        const savedUser = localStorage.getItem('neuroplan_user');
-        const authToken = localStorage.getItem('authToken');
-        
+        const savedUser = localStorage.getItem("neuroplan_user");
+        const authToken = localStorage.getItem("authToken");
+
         if (savedUser && authToken) {
           const userData = JSON.parse(savedUser);
           setUser(userData);
         }
       } catch (error) {
-        console.error('Error checking auth:', error);
-        localStorage.removeItem('neuroplan_user');
-        localStorage.removeItem('authToken');
+        logger.error("Error checking auth:", error);
+        localStorage.removeItem("neuroplan_user");
+        localStorage.removeItem("authToken");
       } finally {
         setIsLoading(false);
       }
@@ -60,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
+
     try {
       // Intentar login con el backend (si está disponible)
       try {
@@ -68,40 +76,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // authService.login ya hace .then(res => res.data), así que response es el objeto directo
         const token = response.accessToken || response.token;
         if (token && response.user) {
-          localStorage.setItem('authToken', token);
+          localStorage.setItem("authToken", token);
           setUser(response.user);
-          localStorage.setItem('neuroplan_user', JSON.stringify(response.user));
+          localStorage.setItem("neuroplan_user", JSON.stringify(response.user));
           return true;
         }
       } catch (backendError) {
-        console.warn('Backend auth not available, using mock login:', backendError);
+        logger.warn(
+          "Backend auth not available, using mock login:",
+          backendError
+        );
       }
-      
+
       // Fallback: Simulamos login para demo (cuando backend no esté disponible)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Simular datos de usuario para demo
       const userData: User = {
-        id: '1',
+        id: "1",
         email,
-        nombre: 'Usuario',
-        apellidos: 'Demo',
+        nombre: "Usuario",
+        apellidos: "Demo",
         perfilNeuroAcademico: {
-          nivelActual: 'Bachillerato',
-          objetivosAcademicos: 'Acceder a la universidad',
-          fortalezas: ['Memoria visual', 'Pensamiento lógico'],
-          areasApoyo: ['Atención', 'Organización'],
-          preferenciasSensoriales: ['Visual', 'Interactivo']
-        }
+          nivelActual: "Bachillerato",
+          objetivosAcademicos: "Acceder a la universidad",
+          fortalezas: ["Memoria visual", "Pensamiento lógico"],
+          areasApoyo: ["Atención", "Organización"],
+          preferenciasSensoriales: ["Visual", "Interactivo"],
+        },
       };
-      
+
       setUser(userData);
-      localStorage.setItem('neuroplan_user', JSON.stringify(userData));
-      localStorage.setItem('authToken', 'demo_token_' + Date.now());
-      
+      localStorage.setItem("neuroplan_user", JSON.stringify(userData));
+      localStorage.setItem("authToken", "demo_token_" + Date.now());
+
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error("Login error:", error);
       return false;
     } finally {
       setIsLoading(false);
@@ -111,38 +122,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
-    localStorage.removeItem('neuroplan_user');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem("neuroplan_user");
+    localStorage.removeItem("authToken");
   };
 
   const updateUser = (userData: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      localStorage.setItem('neuroplan_user', JSON.stringify(updatedUser));
+      localStorage.setItem("neuroplan_user", JSON.stringify(updatedUser));
     }
   };
 
-  const value: AuthContextType = useMemo(() => ({
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-    updateUser,
-  }), [user, isLoading]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value: AuthContextType = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      logout,
+      updateUser,
+    }),
+    [user, isLoading]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

@@ -1,27 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Video, 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Download, 
-  BookOpen, 
-  FileText, 
-  Image, 
-  Search, 
-  Filter, 
-  Clock, 
-  Star, 
-  Eye, 
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Video,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Download,
+  BookOpen,
+  FileText,
+  Image,
+  Search,
+  Filter,
+  Clock,
+  Star,
+  Eye,
   ThumbsUp,
   Share2,
   Bookmark,
@@ -29,10 +41,11 @@ import {
   RotateCcw,
   Maximize,
   Minimize,
-  Settings
-} from 'lucide-react';
-import { useVoice } from '@/hooks/use-voice';
-import { veedService } from '@/services/veed';
+  Settings,
+} from "lucide-react";
+import { useVoice } from "@/hooks/use-voice";
+import { veedService } from "@/services/veed";
+import { logger } from "@/utils/logger";
 
 /**
  * Página de recursos educativos
@@ -40,10 +53,10 @@ import { veedService } from '@/services/veed';
  */
 export const EducationalResources: React.FC = () => {
   const { speak, isSpeaking, stopSpeaking } = useVoice();
-  const [activeTab, setActiveTab] = useState('videos');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('');
+  const [activeTab, setActiveTab] = useState("videos");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("");
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<any>(null);
@@ -60,96 +73,111 @@ export const EducationalResources: React.FC = () => {
   const [mockVideos] = useState([
     {
       id: 1,
-      title: 'Introducción a las Ecuaciones de Segundo Grado',
-      description: 'Aprende los conceptos básicos de las ecuaciones cuadráticas con ejemplos prácticos',
-      url: 'https://example.com/video1.mp4',
-      thumbnail: 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=Matemáticas',
+      title: "Introducción a las Ecuaciones de Segundo Grado",
+      description:
+        "Aprende los conceptos básicos de las ecuaciones cuadráticas con ejemplos prácticos",
+      url: "https://example.com/video1.mp4",
+      thumbnail:
+        "https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=Matemáticas",
       duration: 1200, // 20 minutos
-      subject: 'Matemáticas',
-      level: 'ESO',
-      year: '3º ESO',
+      subject: "Matemáticas",
+      level: "ESO",
+      year: "3º ESO",
       progress: 75,
       views: 1250,
       likes: 89,
       rating: 4.8,
       subtitles: true,
-      transcript: 'En este video aprenderemos los conceptos básicos del álgebra...',
-      tags: ['ecuaciones', 'álgebra', 'matemáticas', 'segundo grado'],
-      createdAt: new Date('2024-01-15'),
-      instructor: 'Prof. Ana Martínez'
+      transcript:
+        "En este video aprenderemos los conceptos básicos del álgebra...",
+      tags: ["ecuaciones", "álgebra", "matemáticas", "segundo grado"],
+      createdAt: new Date("2024-01-15"),
+      instructor: "Prof. Ana Martínez",
     },
     {
       id: 2,
-      title: 'Historia de España: Siglo XX',
-      description: 'Repaso completo de los acontecimientos más importantes del siglo XX en España',
-      url: 'https://example.com/video2.mp4',
-      thumbnail: 'https://via.placeholder.com/300x200/DC2626/FFFFFF?text=Historia',
+      title: "Historia de España: Siglo XX",
+      description:
+        "Repaso completo de los acontecimientos más importantes del siglo XX en España",
+      url: "https://example.com/video2.mp4",
+      thumbnail:
+        "https://via.placeholder.com/300x200/DC2626/FFFFFF?text=Historia",
       duration: 1800, // 30 minutos
-      subject: 'Historia',
-      level: 'Bachillerato',
-      year: '2º Bachillerato',
+      subject: "Historia",
+      level: "Bachillerato",
+      year: "2º Bachillerato",
       progress: 45,
       views: 890,
       likes: 67,
       rating: 4.6,
       subtitles: true,
-      transcript: 'El siglo XX fue un período de grandes cambios en España...',
-      tags: ['historia', 'españa', 'siglo xx', 'guerra civil'],
-      createdAt: new Date('2024-01-20'),
-      instructor: 'Prof. Carlos López'
+      transcript: "El siglo XX fue un período de grandes cambios en España...",
+      tags: ["historia", "españa", "siglo xx", "guerra civil"],
+      createdAt: new Date("2024-01-20"),
+      instructor: "Prof. Carlos López",
     },
     {
       id: 3,
-      title: 'Fotosíntesis: Proceso Vital',
-      description: 'Explicación detallada del proceso de fotosíntesis en las plantas',
-      url: 'https://example.com/video3.mp4',
-      thumbnail: 'https://via.placeholder.com/300x200/059669/FFFFFF?text=Ciencias',
+      title: "Fotosíntesis: Proceso Vital",
+      description:
+        "Explicación detallada del proceso de fotosíntesis en las plantas",
+      url: "https://example.com/video3.mp4",
+      thumbnail:
+        "https://via.placeholder.com/300x200/059669/FFFFFF?text=Ciencias",
       duration: 900, // 15 minutos
-      subject: 'Ciencias',
-      level: 'ESO',
-      year: '2º ESO',
+      subject: "Ciencias",
+      level: "ESO",
+      year: "2º ESO",
       progress: 100,
       views: 2100,
       likes: 156,
       rating: 4.9,
       subtitles: true,
-      transcript: 'La fotosíntesis es el proceso por el cual las plantas...',
-      tags: ['fotosíntesis', 'plantas', 'biología', 'ciencias naturales'],
-      createdAt: new Date('2024-01-25'),
-      instructor: 'Prof. María García'
-    }
+      transcript: "La fotosíntesis es el proceso por el cual las plantas...",
+      tags: ["fotosíntesis", "plantas", "biología", "ciencias naturales"],
+      createdAt: new Date("2024-01-25"),
+      instructor: "Prof. María García",
+    },
   ]);
 
   const [mockDocuments] = useState([
     {
       id: 1,
-      title: 'Guía de Estudio: Álgebra Básica',
-      description: 'Resumen completo de conceptos algebraicos fundamentales',
-      type: 'pdf',
-      subject: 'Matemáticas',
-      level: 'ESO',
+      title: "Guía de Estudio: Álgebra Básica",
+      description: "Resumen completo de conceptos algebraicos fundamentales",
+      type: "pdf",
+      subject: "Matemáticas",
+      level: "ESO",
       pages: 25,
       downloads: 450,
       rating: 4.7,
-      url: '/documents/algebra-basica.pdf',
-      thumbnail: 'https://via.placeholder.com/200x280/4F46E5/FFFFFF?text=PDF'
+      url: "/documents/algebra-basica.pdf",
+      thumbnail: "https://via.placeholder.com/200x280/4F46E5/FFFFFF?text=PDF",
     },
     {
       id: 2,
-      title: 'Esquema: Períodos Históricos',
-      description: 'Mapa conceptual de los principales períodos históricos',
-      type: 'image',
-      subject: 'Historia',
-      level: 'Bachillerato',
+      title: "Esquema: Períodos Históricos",
+      description: "Mapa conceptual de los principales períodos históricos",
+      type: "image",
+      subject: "Historia",
+      level: "Bachillerato",
       downloads: 320,
       rating: 4.5,
-      url: '/images/esquema-historia.jpg',
-      thumbnail: 'https://via.placeholder.com/200x280/DC2626/FFFFFF?text=Esquema'
-    }
+      url: "/images/esquema-historia.jpg",
+      thumbnail:
+        "https://via.placeholder.com/200x280/DC2626/FFFFFF?text=Esquema",
+    },
   ]);
 
-  const subjects = ['Matemáticas', 'Lengua', 'Historia', 'Ciencias', 'Inglés', 'Arte'];
-  const levels = ['ESO', 'Bachillerato', 'FP', 'Universidad'];
+  const subjects = [
+    "Matemáticas",
+    "Lengua",
+    "Historia",
+    "Ciencias",
+    "Inglés",
+    "Arte",
+  ];
+  const levels = ["ESO", "Bachillerato", "FP", "Universidad"];
 
   useEffect(() => {
     loadVideos();
@@ -162,13 +190,13 @@ export const EducationalResources: React.FC = () => {
       const filters = {
         subject: selectedSubject,
         level: selectedLevel,
-        search: searchTerm
+        search: searchTerm,
       };
-      
+
       const fetchedVideos = await veedService.getVideos(filters);
       setVideos(fetchedVideos);
     } catch (error) {
-      console.error('Error loading videos:', error);
+      logger.error("Error loading videos:", error);
       // Fallback a datos mock
       setVideos(mockVideos);
     } finally {
@@ -219,40 +247,42 @@ export const EducationalResources: React.FC = () => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      return `${hours}:${mins.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
     }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getSubjectColor = (subject: string) => {
     const colors: Record<string, string> = {
-      'Matemáticas': 'bg-blue-100 text-blue-800',
-      'Lengua': 'bg-green-100 text-green-800',
-      'Historia': 'bg-red-100 text-red-800',
-      'Ciencias': 'bg-emerald-100 text-emerald-800',
-      'Inglés': 'bg-purple-100 text-purple-800',
-      'Arte': 'bg-pink-100 text-pink-800'
+      Matemáticas: "bg-blue-100 text-blue-800",
+      Lengua: "bg-green-100 text-green-800",
+      Historia: "bg-red-100 text-red-800",
+      Ciencias: "bg-emerald-100 text-emerald-800",
+      Inglés: "bg-purple-100 text-purple-800",
+      Arte: "bg-pink-100 text-pink-800",
     };
-    return colors[subject] || 'bg-gray-100 text-gray-800';
+    return colors[subject] || "bg-gray-100 text-gray-800";
   };
 
   const getLevelColor = (level: string) => {
     const colors: Record<string, string> = {
-      'ESO': 'bg-yellow-100 text-yellow-800',
-      'Bachillerato': 'bg-orange-100 text-orange-800',
-      'FP': 'bg-indigo-100 text-indigo-800',
-      'Universidad': 'bg-violet-100 text-violet-800'
+      ESO: "bg-yellow-100 text-yellow-800",
+      Bachillerato: "bg-orange-100 text-orange-800",
+      FP: "bg-indigo-100 text-indigo-800",
+      Universidad: "bg-violet-100 text-violet-800",
     };
-    return colors[level] || 'bg-gray-100 text-gray-800';
+    return colors[level] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -273,9 +303,17 @@ export const EducationalResources: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleReadAloud('Recursos educativos. Aquí puedes encontrar videos, documentos y materiales de estudio.')}
+            onClick={() =>
+              handleReadAloud(
+                "Recursos educativos. Aquí puedes encontrar videos, documentos y materiales de estudio."
+              )
+            }
           >
-            {isSpeaking ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {isSpeaking ? (
+              <Pause className="w-4 h-4" />
+            ) : (
+              <Play className="w-4 h-4" />
+            )}
           </Button>
         </motion.div>
 
@@ -299,7 +337,10 @@ export const EducationalResources: React.FC = () => {
                     />
                   </div>
                 </div>
-                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <Select
+                  value={selectedSubject}
+                  onValueChange={setSelectedSubject}
+                >
                   <SelectTrigger className="w-full md:w-48">
                     <SelectValue placeholder="Materia" />
                   </SelectTrigger>
@@ -341,8 +382,12 @@ export const EducationalResources: React.FC = () => {
               {/* Player Header */}
               <div className="flex items-center justify-between p-4 border-b">
                 <div>
-                  <h2 className="text-xl font-semibold">{currentVideo.title}</h2>
-                  <p className="text-muted-foreground">{currentVideo.instructor}</p>
+                  <h2 className="text-xl font-semibold">
+                    {currentVideo.title}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {currentVideo.instructor}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -350,14 +395,18 @@ export const EducationalResources: React.FC = () => {
                     size="sm"
                     onClick={() => setShowSubtitles(!showSubtitles)}
                   >
-                    {showSubtitles ? 'Ocultar' : 'Mostrar'} Subtítulos
+                    {showSubtitles ? "Ocultar" : "Mostrar"} Subtítulos
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsFullscreen(!isFullscreen)}
                   >
-                    {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                    {isFullscreen ? (
+                      <Minimize className="w-4 h-4" />
+                    ) : (
+                      <Maximize className="w-4 h-4" />
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -375,7 +424,8 @@ export const EducationalResources: React.FC = () => {
                   <Video className="w-16 h-16 mx-auto mb-4" />
                   <p>Reproductor de video</p>
                   <p className="text-sm text-gray-400">
-                    En una implementación real, aquí se mostraría el video de Veed.io
+                    En una implementación real, aquí se mostraría el video de
+                    Veed.io
                   </p>
                 </div>
               </div>
@@ -404,18 +454,31 @@ export const EducationalResources: React.FC = () => {
                       size="sm"
                       onClick={handleTogglePlay}
                     >
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      {isPlaying ? (
+                        <Pause className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleToggleMute}
                     >
-                      {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                      {isMuted ? (
+                        <VolumeX className="w-4 h-4" />
+                      ) : (
+                        <Volume2 className="w-4 h-4" />
+                      )}
                     </Button>
                     <div className="flex items-center gap-2">
                       <span className="text-sm">Velocidad:</span>
-                      <Select value={playbackRate.toString()} onValueChange={(value) => setPlaybackRate(parseFloat(value))}>
+                      <Select
+                        value={playbackRate.toString()}
+                        onValueChange={(value) =>
+                          setPlaybackRate(parseFloat(value))
+                        }
+                      >
                         <SelectTrigger className="w-20">
                           <SelectValue />
                         </SelectTrigger>
@@ -523,7 +586,7 @@ export const EducationalResources: React.FC = () => {
                             <span>{video.likes}</span>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Progreso</span>
@@ -538,7 +601,7 @@ export const EducationalResources: React.FC = () => {
                             onClick={() => handlePlayVideo(video)}
                           >
                             <Play className="w-4 h-4 mr-2" />
-                            {video.progress > 0 ? 'Continuar' : 'Reproducir'}
+                            {video.progress > 0 ? "Continuar" : "Reproducir"}
                           </Button>
                           <Button variant="outline" size="sm">
                             <Bookmark className="w-4 h-4" />
@@ -589,7 +652,7 @@ export const EducationalResources: React.FC = () => {
                             {document.level}
                           </Badge>
                         </div>
-                        
+
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Download className="w-4 h-4" />
@@ -622,7 +685,9 @@ export const EducationalResources: React.FC = () => {
           <TabsContent value="favorites" className="space-y-6">
             <div className="text-center py-12">
               <BookmarkCheck className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No hay favoritos aún</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No hay favoritos aún
+              </h3>
               <p className="text-muted-foreground">
                 Marca recursos como favoritos para acceder a ellos rápidamente
               </p>

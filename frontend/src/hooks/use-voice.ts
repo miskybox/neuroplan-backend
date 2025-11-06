@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from "react";
+import { logger } from "@/utils/logger";
 
 /**
  * Custom hook for text-to-speech functionality
@@ -9,46 +10,49 @@ export const useVoice = () => {
   const [isSupported, setIsSupported] = useState(false);
 
   // Check if speech synthesis is supported
-  useState(() => {
-    setIsSupported('speechSynthesis' in window);
-  });
+  useEffect(() => {
+    setIsSupported("speechSynthesis" in globalThis);
+  }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!isSupported) {
-      console.warn('Speech synthesis is not supported in this browser');
-      return;
-    }
+  const speak = useCallback(
+    (text: string) => {
+      if (!isSupported) {
+        logger.warn("Speech synthesis is not supported in this browser");
+        return;
+      }
 
-    // Stop any current speech
-    window.speechSynthesis.cancel();
+      // Stop any current speech
+      globalThis.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Configure speech settings
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    utterance.lang = 'es-ES'; // Spanish language
+      const utterance = new SpeechSynthesisUtterance(text);
 
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-    };
+      // Configure speech settings
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      utterance.lang = "es-ES"; // Spanish language
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
-    };
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
 
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event.error);
-      setIsSpeaking(false);
-    };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
 
-    window.speechSynthesis.speak(utterance);
-  }, [isSupported]);
+      utterance.onerror = (event) => {
+        logger.error("Speech synthesis error:", event.error);
+        setIsSpeaking(false);
+      };
+
+      globalThis.speechSynthesis.speak(utterance);
+    },
+    [isSupported]
+  );
 
   const stopSpeaking = useCallback(() => {
     if (isSupported) {
-      window.speechSynthesis.cancel();
+      globalThis.speechSynthesis.cancel();
       setIsSpeaking(false);
     }
   }, [isSupported]);
@@ -57,6 +61,6 @@ export const useVoice = () => {
     speak,
     stopSpeaking,
     isSpeaking,
-    isSupported
+    isSupported,
   };
 };

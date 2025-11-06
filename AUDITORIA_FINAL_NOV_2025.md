@@ -38,7 +38,7 @@
 
 **⚠️ MEJORAS IMPORTANTES (Pre-producción, NO bloquean merge):**
 
-3. **Logs sin gestión por entorno** → Frontend usa console.log en producción (~2h)
+3. ✅ **Logs sin gestión por entorno** → Logger utility implementado, 51 console migrados (COMPLETADO 6 nov 2025)
 4. **Contratos API inconsistentes** → Diferentes formatos de respuesta (~3h)
 5. **Validaciones por entorno** → centerId/role opcionales correcto para DEV (~1h ajustar para PROD)
 
@@ -530,9 +530,84 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ---
 
-### ⚠️ IMPORTANTE 3: Logs sin Gestión por Entorno (Prioridad 2)
+### ✅ COMPLETADO: Logs sin Gestión por Entorno (Prioridad 2)
 
-**Consenso de 3 auditorías:**
+**✅ IMPLEMENTACIÓN COMPLETA:**
+
+- ✅ **Logger utility creado:** `frontend/src/utils/logger.ts` con guards de entorno
+- ✅ **51 console calls migrados** en total (42 primera fase + 9 segunda fase)
+- ✅ **12 archivos migrados:**
+  1. `PEIEngine.tsx` - 8 logs
+  2. `WorkflowDemo.tsx` - 8 logs
+  3. `Register.tsx` - 11 logs
+  4. `PdfUploadComponent.tsx` - 5 logs
+  5. `veed.ts` - 7 logs
+  6. `Resources.tsx` - 1 log
+  7. `PEIResult.tsx` - 2 logs
+  8. `NotFound.tsx` - 1 log
+  9. `EducationalResources.tsx` - 1 log
+  10. `AuthContext.tsx` - 3 logs
+  11. `use-voice.tsx` - 2 logs
+  12. `use-voice.ts` - 2 logs
+
+**Validación de producción (6 nov 2025):**
+
+- ✅ Build frontend: exitoso (726KB bundle)
+- ✅ Production bundle: **0** console.log/debug/info
+- ✅ Production bundle: **10** console.warn/error (correcto)
+- ✅ Tree-shaking funcionando correctamente
+
+**Logger implementado:**
+
+```typescript
+// frontend/src/utils/logger.ts
+const isDevelopment =
+  import.meta.env.MODE === "development" || import.meta.env.DEV;
+
+export const logger = {
+  debug: (...args: any[]): void => {
+    if (isDevelopment) {
+      console.log("[DEBUG]", ...args);
+    }
+  },
+  info: (...args: any[]): void => {
+    if (isDevelopment) {
+      console.log("[INFO]", ...args);
+    }
+  },
+  warn: (...args: any[]): void => {
+    console.warn("[WARN]", ...args);
+  },
+  error: (...args: any[]): void => {
+    console.error("[ERROR]", ...args);
+  },
+};
+```
+
+**Patrón de migración aplicado:**
+
+```typescript
+// ANTES
+console.log("Generando PEI con datos:", formData);
+console.error("Error en API:", error);
+
+// DESPUÉS
+import { logger } from "@/utils/logger";
+
+logger.debug("Generando PEI con datos:", formData);
+logger.error("Error en API:", error);
+```
+
+**Beneficios logrados:**
+
+- ✅ Performance: debug/info logs eliminados de bundle de producción
+- ✅ Seguridad: información sensible no expuesta en consola navegador
+- ✅ Debugging: warn/error logs preservados para monitoreo
+- ✅ Bundle size: reducción por tree-shaking de código debug
+
+---
+
+**Consenso de 3 auditorías (ANTES DE MIGRACIÓN):**
 
 - Backend: 10 console.log (6 aceptables en banner)
 - Frontend: 40+ console.log en producción
