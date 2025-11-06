@@ -2,31 +2,42 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Brain, 
-  FileText, 
-  Target, 
-  GraduationCap, 
-  ArrowRight, 
+import {
+  Brain,
+  FileText,
+  Target,
+  GraduationCap,
+  ArrowRight,
   ArrowLeft,
   Upload,
   Eye,
   EyeOff,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
-
 
 interface FormData {
   // Información personal
@@ -35,22 +46,22 @@ interface FormData {
   email: string;
   telefono: string;
   fechaNacimiento: string;
-  
+
   // Información académica
   nivelActual: string;
   objetivosAcademicos: string;
   intereses: string[];
-  
+
   // Información neurocognitiva
   diagnostico: string;
   fortalezas: string[];
   areasApoyo: string[];
   preferenciasSensoriales: string[];
-  
+
   // Documentación
   informesClinicos: File | null;
   documentosAcademicos: File | null;
-  
+
   // Configuración de cuenta
   password: string;
   confirmPassword: string;
@@ -65,7 +76,7 @@ const Register = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [formData, setFormData] = useState<FormData>({
     nombre: "",
     apellidos: "",
@@ -102,7 +113,7 @@ const Register = () => {
     "FP Grado Medio",
     "FP Grado Superior",
     "Universidad",
-    "Otro"
+    "Otro",
   ];
 
   const interesesAcademicos = [
@@ -115,7 +126,7 @@ const Register = () => {
     "Deportes",
     "Música",
     "Idiomas",
-    "Matemáticas"
+    "Matemáticas",
   ];
 
   const fortalezasCognitivas = [
@@ -128,7 +139,7 @@ const Register = () => {
     "Habilidades espaciales",
     "Comunicación verbal",
     "Trabajo en equipo",
-    "Liderazgo"
+    "Liderazgo",
   ];
 
   const areasApoyo = [
@@ -141,7 +152,7 @@ const Register = () => {
     "Comunicación social",
     "Regulación emocional",
     "Motricidad fina",
-    "Procesamiento sensorial"
+    "Procesamiento sensorial",
   ];
 
   const preferenciasSensoriales = [
@@ -152,30 +163,30 @@ const Register = () => {
     "Multimedia",
     "Interactivo",
     "Estructurado",
-    "Flexible"
+    "Flexible",
   ];
 
   const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleArrayToggle = (field: keyof FormData, value: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const currentArray = prev[field] as string[];
       const newArray = currentArray.includes(value)
-        ? currentArray.filter(item => item !== value)
+        ? currentArray.filter((item) => item !== value)
         : [...currentArray, value];
       return { ...prev, [field]: newArray };
     });
   };
 
   const handleFileUpload = (field: keyof FormData, file: File) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: file
+      [field]: file,
     }));
   };
 
@@ -228,12 +239,17 @@ const Register = () => {
     }
   };
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
   // Helper to extract error message from response
 
   // Helper to handle successful registration
-  const handleRegistrationSuccess = (token: string | undefined, user: any, fallbackMsg: string) => {
+  const handleRegistrationSuccess = (
+    token: string | undefined,
+    user: any,
+    fallbackMsg: string
+  ) => {
     if (token) {
       localStorage.setItem("authToken", token);
       if (user) {
@@ -251,8 +267,42 @@ const Register = () => {
     }
   };
 
+  // Helper to handle HTTP status errors
+  const getHttpStatusErrorMsg = (
+    status: number,
+    responseData?: any
+  ): string => {
+    if (status === 400) {
+      return (
+        responseData?.message ||
+        "Datos inválidos. Verifica la información ingresada."
+      );
+    }
+    if (status === 409) {
+      return "El email ya está registrado. Intenta iniciar sesión o usa otro email.";
+    }
+    if (status === 500) {
+      return "Error interno del servidor. Intenta de nuevo más tarde.";
+    }
+    return `Error del servidor (${status}). Intenta de nuevo.`;
+  };
+
   // Helper to extract error message from error object
   const extractErrorMsg = (error: any): string => {
+    // Log completo del error para debugging
+    console.error("Error completo:", error);
+    console.error("Error response:", error?.response);
+    console.error("Error response data:", error?.response?.data);
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    console.error("Error status:", error?.response?.status);
+
+    // Mostrar el stack trace si está disponible
+    if (error?.stack) {
+      console.error("Error stack:", error.stack);
+    }
+
+    // Intentar obtener mensaje de error del backend
     if (error?.response?.data?.message) {
       if (Array.isArray(error.response.data.message)) {
         return error.response.data.message.join(", ");
@@ -262,10 +312,30 @@ const Register = () => {
     if (error?.response?.data?.error) {
       return error.response.data.error;
     }
+
+    // Errores de conexión
+    if (error?.code === "ECONNREFUSED" || error?.code === "ERR_NETWORK") {
+      return "No se pudo conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:3001";
+    }
+
+    // Errores de timeout
+    if (error?.code === "ECONNABORTED") {
+      return "La solicitud tardó demasiado. Intenta de nuevo.";
+    }
+
+    // Errores HTTP
+    if (error?.response?.status) {
+      return getHttpStatusErrorMsg(
+        error.response.status,
+        error?.response?.data
+      );
+    }
+
+    // Mensaje genérico del error
     if (error?.message) {
       return error.message;
     }
-    if (typeof error === 'string') {
+    if (typeof error === "string") {
       return error;
     }
     return "No se pudo registrar. Intenta de nuevo.";
@@ -279,7 +349,9 @@ const Register = () => {
     }
 
     if (!passwordRegex.test(formData.password)) {
-      setFormError("La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, un número y un símbolo.");
+      setFormError(
+        "La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, un número y un símbolo."
+      );
       return;
     }
 
@@ -289,7 +361,11 @@ const Register = () => {
     }
 
     // Validar campos básicos nuevamente antes de enviar
-    if (!formData.nombre.trim() || !formData.apellidos.trim() || !formData.email.trim()) {
+    if (
+      !formData.nombre.trim() ||
+      !formData.apellidos.trim() ||
+      !formData.email.trim()
+    ) {
       setFormError("Por favor completa todos los campos obligatorios");
       return;
     }
@@ -303,14 +379,13 @@ const Register = () => {
     setFormSuccess(null);
 
     // Preparar datos para el backend (en inglés, solo los requeridos)
-    // Usamos valores por defecto para MVP
+    // Campos opcionales para MVP en desarrollo
     const userData = {
       firstName: formData.nombre.trim(),
       lastName: formData.apellidos.trim(),
       email: formData.email.trim().toLowerCase(),
       password: formData.password,
-      role: "PROFESOR", // Rol por defecto para MVP
-      centerId: "11111111-1111-1111-1111-111111111111" // Centro demo con UUID válido
+      // role y centerId son opcionales, backend usará defaults
     };
 
     try {
@@ -325,18 +400,31 @@ const Register = () => {
 
       if (token && user) {
         // Registro completamente exitoso con token y usuario
-        handleRegistrationSuccess(token, user, "¡Registro exitoso! Redirigiendo...");
+        handleRegistrationSuccess(
+          token,
+          user,
+          "¡Registro exitoso! Redirigiendo..."
+        );
       } else if (user) {
         // Usuario creado pero sin token (caso raro)
-        handleRegistrationSuccess(undefined, user, "Usuario creado. Por favor inicia sesión.");
+        handleRegistrationSuccess(
+          undefined,
+          user,
+          "Usuario creado. Por favor inicia sesión."
+        );
       } else {
-        console.warn("Registro aparentemente exitoso pero sin token ni usuario. Respuesta:", response);
+        console.warn(
+          "Registro aparentemente exitoso pero sin token ni usuario. Respuesta:",
+          response
+        );
         setFormError("No se pudo crear la cuenta. Intenta de nuevo.");
         setIsSubmitting(false);
       }
     } catch (error: any) {
       console.error("Error en registro:", error);
-      setFormError(extractErrorMsg(error));
+      const errorMessage = extractErrorMsg(error);
+      console.error("Mensaje de error extraído:", errorMessage);
+      setFormError(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -371,12 +459,14 @@ const Register = () => {
                 <Input
                   id="apellidos"
                   value={formData.apellidos}
-                  onChange={(e) => handleInputChange("apellidos", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("apellidos", e.target.value)
+                  }
                   placeholder="Tus apellidos"
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -387,7 +477,7 @@ const Register = () => {
                 placeholder="tu@email.com"
               />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <PhoneInput
                 label="Teléfono"
@@ -410,7 +500,12 @@ const Register = () => {
           <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="nivelActual">Nivel académico actual *</Label>
-              <Select value={formData.nivelActual} onValueChange={(value) => handleInputChange("nivelActual", value)}>
+              <Select
+                value={formData.nivelActual}
+                onValueChange={(value) =>
+                  handleInputChange("nivelActual", value)
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona tu nivel actual" />
                 </SelectTrigger>
@@ -423,18 +518,22 @@ const Register = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="objetivosAcademicos">Objetivos académicos *</Label>
+              <Label htmlFor="objetivosAcademicos">
+                Objetivos académicos *
+              </Label>
               <Textarea
                 id="objetivosAcademicos"
                 value={formData.objetivosAcademicos}
-                onChange={(e) => handleInputChange("objetivosAcademicos", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("objetivosAcademicos", e.target.value)
+                }
                 placeholder="Describe tus objetivos académicos y profesionales..."
                 rows={4}
               />
             </div>
-            
+
             <div className="space-y-3">
               <Label>Áreas de interés académico</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -443,9 +542,13 @@ const Register = () => {
                     <Checkbox
                       id={interes}
                       checked={formData.intereses.includes(interes)}
-                      onCheckedChange={() => handleArrayToggle("intereses", interes)}
+                      onCheckedChange={() =>
+                        handleArrayToggle("intereses", interes)
+                      }
                     />
-                    <Label htmlFor={interes} className="text-sm">{interes}</Label>
+                    <Label htmlFor={interes} className="text-sm">
+                      {interes}
+                    </Label>
                   </div>
                 ))}
               </div>
@@ -457,16 +560,20 @@ const Register = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="diagnostico">Diagnóstico o información neurocognitiva</Label>
+              <Label htmlFor="diagnostico">
+                Diagnóstico o información neurocognitiva
+              </Label>
               <Textarea
                 id="diagnostico"
                 value={formData.diagnostico}
-                onChange={(e) => handleInputChange("diagnostico", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("diagnostico", e.target.value)
+                }
                 placeholder="Información sobre diagnóstico, características neurocognitivas, etc. (opcional)"
                 rows={3}
               />
             </div>
-            
+
             <div className="space-y-3">
               <Label>Fortalezas cognitivas</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -475,14 +582,18 @@ const Register = () => {
                     <Checkbox
                       id={fortaleza}
                       checked={formData.fortalezas.includes(fortaleza)}
-                      onCheckedChange={() => handleArrayToggle("fortalezas", fortaleza)}
+                      onCheckedChange={() =>
+                        handleArrayToggle("fortalezas", fortaleza)
+                      }
                     />
-                    <Label htmlFor={fortaleza} className="text-sm">{fortaleza}</Label>
+                    <Label htmlFor={fortaleza} className="text-sm">
+                      {fortaleza}
+                    </Label>
                   </div>
                 ))}
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <Label>Áreas que requieren apoyo</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -491,25 +602,41 @@ const Register = () => {
                     <Checkbox
                       id={area}
                       checked={formData.areasApoyo.includes(area)}
-                      onCheckedChange={() => handleArrayToggle("areasApoyo", area)}
+                      onCheckedChange={() =>
+                        handleArrayToggle("areasApoyo", area)
+                      }
                     />
-                    <Label htmlFor={area} className="text-sm">{area}</Label>
+                    <Label htmlFor={area} className="text-sm">
+                      {area}
+                    </Label>
                   </div>
                 ))}
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <Label>Preferencias de aprendizaje</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {preferenciasSensoriales.map((preferencia) => (
-                  <div key={preferencia} className="flex items-center space-x-2">
+                  <div
+                    key={preferencia}
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       id={preferencia}
-                      checked={formData.preferenciasSensoriales.includes(preferencia)}
-                      onCheckedChange={() => handleArrayToggle("preferenciasSensoriales", preferencia)}
+                      checked={formData.preferenciasSensoriales.includes(
+                        preferencia
+                      )}
+                      onCheckedChange={() =>
+                        handleArrayToggle(
+                          "preferenciasSensoriales",
+                          preferencia
+                        )
+                      }
                     />
-                    <Label htmlFor={preferencia} className="text-sm">{preferencia}</Label>
+                    <Label htmlFor={preferencia} className="text-sm">
+                      {preferencia}
+                    </Label>
                   </div>
                 ))}
               </div>
@@ -522,7 +649,9 @@ const Register = () => {
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="informesClinicos">Informes clínicos (opcional)</Label>
+                <Label htmlFor="informesClinicos">
+                  Informes clínicos (opcional)
+                </Label>
                 <div className="flex items-center gap-4">
                   <Input
                     id="informesClinicos"
@@ -535,19 +664,25 @@ const Register = () => {
                     className="flex-1"
                   />
                   {formData.informesClinicos && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       <CheckCircle2 className="h-3 w-3" />
                       {formData.informesClinicos.name}
                     </Badge>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Sube informes médicos, psicológicos o educativos que puedan ayudar a crear tu perfil
+                  Sube informes médicos, psicológicos o educativos que puedan
+                  ayudar a crear tu perfil
                 </p>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="documentosAcademicos">Documentos académicos (opcional)</Label>
+                <Label htmlFor="documentosAcademicos">
+                  Documentos académicos (opcional)
+                </Label>
                 <div className="flex items-center gap-4">
                   <Input
                     id="documentosAcademicos"
@@ -560,7 +695,10 @@ const Register = () => {
                     className="flex-1"
                   />
                   {formData.documentosAcademicos && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       <CheckCircle2 className="h-3 w-3" />
                       {formData.documentosAcademicos.name}
                     </Badge>
@@ -571,15 +709,17 @@ const Register = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
                 <div className="space-y-2">
                   <h4 className="font-medium">Procesamiento seguro con IA</h4>
                   <p className="text-sm text-muted-foreground">
-                    Nuestro PEI Engine utiliza OCR/NLP para extraer información relevante de tus documentos 
-                    de forma segura y confidencial. Los datos se procesan localmente y se eliminan después del análisis.
+                    Nuestro PEI Engine utiliza OCR/NLP para extraer información
+                    relevante de tus documentos de forma segura y confidencial.
+                    Los datos se procesan localmente y se eliminan después del
+                    análisis.
                   </p>
                 </div>
               </div>
@@ -600,7 +740,9 @@ const Register = () => {
                   autoComplete="new-password"
                   required
                   value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
                   placeholder="Mínimo 8 caracteres"
                 />
                 <Button
@@ -610,11 +752,15 @@ const Register = () => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
               <div className="relative">
@@ -625,7 +771,9 @@ const Register = () => {
                   autoComplete="new-password"
                   required
                   value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("confirmPassword", e.target.value)
+                  }
                   placeholder="Repite tu contraseña"
                 />
                 <Button
@@ -635,17 +783,23 @@ const Register = () => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <Checkbox
                   id="terminos"
                   checked={formData.terminos}
-                  onCheckedChange={(checked) => handleInputChange("terminos", checked)}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("terminos", checked)
+                  }
                 />
                 <div className="space-y-1">
                   <Label htmlFor="terminos" className="text-sm">
@@ -663,12 +817,14 @@ const Register = () => {
                   </Label>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <Checkbox
                   id="privacidad"
                   checked={formData.privacidad}
-                  onCheckedChange={(checked) => handleInputChange("privacidad", checked)}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("privacidad", checked)
+                  }
                 />
                 <div className="space-y-1">
                   <Label htmlFor="privacidad" className="text-sm">
@@ -698,7 +854,7 @@ const Register = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container py-12">
         <div className="max-w-4xl mx-auto">
           {formError && (
@@ -717,17 +873,18 @@ const Register = () => {
               <Brain className="h-4 w-4" />
               <span>PEI Engine - Motor de Individualización</span>
             </div>
-            
+
             <h1 className="text-3xl md:text-4xl font-bold">
               Crea tu{" "}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Perfil NeuroAcadémico AI
               </span>
             </h1>
-            
+
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Nuestro PEI Engine analizará tu información para crear un itinerario académico 
-              personalizado y homologable que se adapte a tus características neurocognitivas.
+              Nuestro PEI Engine analizará tu información para crear un
+              itinerario académico personalizado y homologable que se adapte a
+              tus características neurocognitivas.
             </p>
           </div>
 
@@ -749,15 +906,19 @@ const Register = () => {
                 const StepIcon = step.icon;
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
-                
+
                 // Extract the className logic into a variable
-                let stepClassName = "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ";
+                let stepClassName =
+                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ";
                 if (isActive) {
-                  stepClassName += "bg-primary border-primary text-primary-foreground";
+                  stepClassName +=
+                    "bg-primary border-primary text-primary-foreground";
                 } else if (isCompleted) {
-                  stepClassName += "bg-success border-success text-success-foreground";
+                  stepClassName +=
+                    "bg-success border-success text-success-foreground";
                 } else {
-                  stepClassName += "bg-background border-muted-foreground/30 text-muted-foreground";
+                  stepClassName +=
+                    "bg-background border-muted-foreground/30 text-muted-foreground";
                 }
 
                 return (
@@ -770,9 +931,11 @@ const Register = () => {
                       )}
                     </div>
                     {index < steps.length - 1 && (
-                      <div className={`w-8 h-0.5 mx-2 ${
-                        isCompleted ? 'bg-success' : 'bg-muted-foreground/30'
-                      }`} />
+                      <div
+                        className={`w-8 h-0.5 mx-2 ${
+                          isCompleted ? "bg-success" : "bg-muted-foreground/30"
+                        }`}
+                      />
                     )}
                   </div>
                 );
@@ -784,20 +947,30 @@ const Register = () => {
           <Card className="shadow-elegant">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                {React.createElement(steps[currentStep - 1].icon, { className: "h-5 w-5" })}
+                {React.createElement(steps[currentStep - 1].icon, {
+                  className: "h-5 w-5",
+                })}
                 {steps[currentStep - 1].title}
               </CardTitle>
               <CardDescription>
                 {currentStep === 1 && "Información básica para crear tu perfil"}
-                {currentStep === 2 && "Define tus objetivos académicos y áreas de interés"}
-                {currentStep === 3 && "Información neurocognitiva para personalización"}
-                {currentStep === 4 && "Documentos que ayuden a nuestro PEI Engine"}
-                {currentStep === 5 && "Configura tu cuenta y acepta los términos"}
+                {currentStep === 2 &&
+                  "Define tus objetivos académicos y áreas de interés"}
+                {currentStep === 3 &&
+                  "Información neurocognitiva para personalización"}
+                {currentStep === 4 &&
+                  "Documentos que ayuden a nuestro PEI Engine"}
+                {currentStep === 5 &&
+                  "Configura tu cuenta y acepta los términos"}
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent>
-              <form onSubmit={handleFormSubmit} noValidate className="space-y-6">
+              <form
+                onSubmit={handleFormSubmit}
+                noValidate
+                className="space-y-6"
+              >
                 {renderStepContent()}
 
                 {/* Navigation */}
@@ -814,35 +987,43 @@ const Register = () => {
                   </Button>
 
                   {currentStep < steps.length ? (
-                    <Button type="button" onClick={nextStep} className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      className="flex items-center gap-2"
+                    >
                       Siguiente
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="flex items-center gap-2 bg-gradient-hero"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
                         <>
-                          <span className="mr-2 animate-spin" aria-label="Cargando">
-                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              />
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                              />
-                            </svg>
-                          </span>Creando cuenta...
+                          <svg
+                            className="h-4 w-4 mr-2 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-label="Cargando"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            />
+                          </svg>
+                          Creando cuenta...
                         </>
                       ) : (
                         <>
@@ -856,13 +1037,13 @@ const Register = () => {
               </form>
             </CardContent>
           </Card>
-          
+
           {/* Login Link */}
           <div className="text-center mt-6">
             <p className="text-muted-foreground">
               ¿Ya tienes cuenta?{" "}
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 Inicia sesión aquí
@@ -871,7 +1052,7 @@ const Register = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );
