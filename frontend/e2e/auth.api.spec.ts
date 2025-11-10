@@ -31,16 +31,17 @@ test.describe("Authentication API E2E Tests", () => {
       expect([201, 400, 409]).toContain(response.status());
 
       const body = await response.json();
+      const data = body.data ?? body;
 
       if (response.status() === 201) {
-        expect(body).toHaveProperty("user");
-        expect(body.user.email).toBe(TEST_USER.email);
-        expect(body.user.role).toBe(TEST_USER.role);
+        expect(data).toHaveProperty("user");
+        expect(data.user.email).toBe(TEST_USER.email);
+        expect(data.user.role).toBe(TEST_USER.role);
       } else {
         // Si el usuario ya existe (400 o 409), es un escenario válido
         // Puede decir "already", "ya existe", "ya está registrado", etc.
-        expect(body.message).toBeDefined();
-        expect(typeof body.message).toBe("string");
+        expect((data.message ?? body.message)).toBeDefined();
+        expect(typeof (data.message ?? body.message)).toBe("string");
       }
     });
 
@@ -98,19 +99,20 @@ test.describe("Authentication API E2E Tests", () => {
 
       expect(response.status()).toBe(200);
       const body = await response.json();
+      const data = body.data ?? body;
 
       // Verificar estructura de la respuesta
-      expect(body).toHaveProperty("accessToken");
-      expect(body).toHaveProperty("user");
-      expect(body.accessToken).toBeTruthy();
-      expect(typeof body.accessToken).toBe("string");
+      expect(data).toHaveProperty("accessToken");
+      expect(data).toHaveProperty("user");
+      expect(data.accessToken).toBeTruthy();
+      expect(typeof data.accessToken).toBe("string");
 
       // Verificar datos del usuario
-      expect(body.user.email).toBe(ADMIN_USER.email);
-      expect(body.user.role).toBe("ORIENTADOR"); // Cambiado de ADMIN a ORIENTADOR (e2e-test@neuroplan.com)
-      expect(body.user).toHaveProperty("id");
-      expect(body.user).toHaveProperty("firstName");
-      expect(body.user).toHaveProperty("lastName");
+      expect(data.user.email).toBe(ADMIN_USER.email);
+      expect(data.user.role).toBe("ORIENTADOR"); // Cambiado de ADMIN a ORIENTADOR (e2e-test@neuroplan.com)
+      expect(data.user).toHaveProperty("id");
+      expect(data.user).toHaveProperty("firstName");
+      expect(data.user).toHaveProperty("lastName");
     });
 
     test("should reject login with invalid credentials", async ({
@@ -125,7 +127,8 @@ test.describe("Authentication API E2E Tests", () => {
 
       expect(response.status()).toBe(401);
       const body = await response.json();
-      expect(body.message).toBeDefined();
+      const data = body.data ?? body;
+      expect((data.message ?? body.message)).toBeDefined();
     });
 
     test("should reject login with non-existent user", async ({ request }) => {
@@ -172,17 +175,19 @@ test.describe("Authentication API E2E Tests", () => {
 
       expect(response.status()).toBe(200);
       const body = await response.json();
+      const data = body.data ?? body;
 
-      expect(body).toHaveProperty("message");
-      expect(body).toHaveProperty("usuario");
-      expect(body.usuario.email).toBe(ADMIN_USER.email);
-      expect(body.usuario.role).toBe("ORIENTADOR"); // Cambiado de ADMIN a ORIENTADOR (e2e-test@neuroplan.com)
-      expect(body.usuario).toHaveProperty("id");
-      expect(body.usuario).toHaveProperty("firstName");
-      expect(body.usuario).toHaveProperty("lastName");
-      expect(body.usuario).toHaveProperty("centerId");
-      expect(body.usuario).toHaveProperty("active");
-      expect(body.usuario.active).toBe(true);
+      expect((data.message ?? body.message)).toBeDefined();
+      const usuario = (data.usuario ?? body.usuario);
+      expect(usuario).toBeDefined();
+      expect(usuario.email).toBe(ADMIN_USER.email);
+      expect(usuario.role).toBe("ORIENTADOR");
+      expect(usuario).toHaveProperty("id");
+      expect(usuario).toHaveProperty("firstName");
+      expect(usuario).toHaveProperty("lastName");
+      expect(usuario).toHaveProperty("centerId");
+      expect(usuario).toHaveProperty("active");
+      expect(usuario.active).toBe(true);
     });
 
     test("should reject request without token", async ({ request }) => {
@@ -259,19 +264,21 @@ test.describe("Authentication API E2E Tests", () => {
       if (registerResponse.status() === 201) {
         expect(loginResponse.status()).toBe(200);
         const loginBody = await loginResponse.json();
-        expect(loginBody.accessToken).toBeTruthy();
+        const loginData = loginBody.data ?? loginBody;
+        expect(loginData.accessToken).toBeTruthy();
 
         // 3. Acceder a ruta protegida con el token
         const meResponse = await request.get(`${API_BASE_URL}/auth/me`, {
           headers: {
-            Authorization: `Bearer ${loginBody.accessToken}`,
+            Authorization: `Bearer ${loginData.accessToken}`,
           },
         });
 
         expect(meResponse.status()).toBe(200);
         const meBody = await meResponse.json();
-        expect(meBody.usuario.email).toBe(uniqueEmail);
-        expect(meBody.usuario.role).toBe(newUser.role);
+        const meData = meBody.data ?? meBody;
+        expect(meData.usuario.email).toBe(uniqueEmail);
+        expect(meData.usuario.role).toBe(newUser.role);
       }
     });
   });

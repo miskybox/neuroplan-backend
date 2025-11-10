@@ -4,8 +4,14 @@ import { Logger } from "@nestjs/common";
 const logger = new Logger("Database");
 
 // Configuración de Supabase
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const authMock =
+  String(process.env.AUTH_MOCK || "false").toLowerCase() === "true";
+const supabaseUrl =
+  process.env.SUPABASE_URL ||
+  (authMock ? "https://mock.supabase.local" : undefined);
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  (authMock ? "mock-service-role-key" : undefined);
 
 if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error(

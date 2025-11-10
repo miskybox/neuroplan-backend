@@ -47,12 +47,13 @@ test.describe("Students API E2E Tests", () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      const data = body.data ?? body;
 
       expect(body.success).toBe(true);
       expect(body.message).toContain("creado");
-      expect(body.student).toBeDefined();
-      expect(body.student.first_name).toContain(TEST_STUDENT.first_name);
-      expect(body.student.last_name).toBe(TEST_STUDENT.last_name);
+      expect(data).toBeDefined();
+      expect(data.first_name).toContain(TEST_STUDENT.first_name);
+      expect(data.last_name).toBe(TEST_STUDENT.last_name);
       // Nota: grade, parent_email ya no existen en esquema normalizado
       // Se mantienen en el DTO pero no se guardan en la BD
     });
@@ -109,9 +110,10 @@ test.describe("Students API E2E Tests", () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      const data = body.data ?? body;
       expect(body.success).toBe(true);
-      expect(body.student.first_name).toBeDefined();
-      expect(body.student.last_name).toBeDefined();
+      expect(data.first_name).toBeDefined();
+      expect(data.last_name).toBeDefined();
     });
   });
 
@@ -127,11 +129,12 @@ test.describe("Students API E2E Tests", () => {
 
       expect(response.status()).toBe(200);
       const body = await response.json();
+      const data = body.data ?? body;
 
       expect(body.success).toBe(true);
-      expect(body.students).toBeDefined();
-      expect(Array.isArray(body.students)).toBe(true);
-      expect(body.count).toBe(body.students.length);
+      expect(data.students).toBeDefined();
+      expect(Array.isArray(data.students)).toBe(true);
+      expect(data.count).toBe(data.students.length);
 
       // Si hay estudiantes, verificar estructura
       if (body.students.length > 0) {
@@ -187,8 +190,9 @@ test.describe("Students API E2E Tests", () => {
 
       expect(studentsResponse.status()).toBe(200);
       const body = await studentsResponse.json();
-      expect(body.students).toEqual([]);
-      expect(body.count).toBe(0);
+      const data = body.data ?? body;
+      expect(data.students).toEqual([]);
+      expect(data.count).toBe(0);
     });
   });
 
@@ -207,7 +211,8 @@ test.describe("Students API E2E Tests", () => {
         },
       });
       const body = await response.json();
-      testStudentId = body.student.id;
+      const data = body.data ?? body;
+      testStudentId = data.id;
     });
 
     test("should get student by id successfully", async ({ request }) => {
@@ -222,12 +227,13 @@ test.describe("Students API E2E Tests", () => {
 
       expect(response.status()).toBe(200);
       const body = await response.json();
+      const data = body.data ?? body;
 
       expect(body.success).toBe(true);
-      expect(body.student).toBeDefined();
-      expect(body.student.id).toBe(testStudentId);
-      expect(body.student.first_name).toBeDefined();
-      expect(body.student.last_name).toBeDefined();
+      expect(data).toBeDefined();
+      expect(data.id).toBe(testStudentId);
+      expect(data.first_name).toBeDefined();
+      expect(data.last_name).toBeDefined();
     });
 
     test("should reject request without authentication", async ({
@@ -435,7 +441,8 @@ test.describe("Students API E2E Tests", () => {
 
       expect(getResponse.status()).toBe(200);
       const getBody = await getResponse.json();
-      expect(getBody.student.id).toBe(studentId);
+      const getData = getBody.data ?? getBody;
+      expect(getData.id).toBe(studentId);
 
       // 3. UPDATE
       const updatedLastName = `${TEST_STUDENT.last_name} UPDATED`;
@@ -455,8 +462,9 @@ test.describe("Students API E2E Tests", () => {
 
       expect(updateResponse.status()).toBe(200);
       const updateBody = await updateResponse.json();
-      expect(updateBody.student.first_name).toBe(studentFirstName);
-      expect(updateBody.student.last_name).toBe(updatedLastName);
+      const updateData = updateBody.data ?? updateBody;
+      expect(updateData.first_name).toBe(studentFirstName);
+      expect(updateData.last_name).toBe(updatedLastName);
       // Nota: grade ya no existe en esquema normalizado
 
       // 4. DELETE

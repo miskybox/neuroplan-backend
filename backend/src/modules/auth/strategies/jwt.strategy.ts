@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, Logger } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { getUserById } from "../../../db";
+import { MockAuthStore } from "../mock-auth.store";
 
 export interface JwtPayload {
   sub: string; // Usuario ID
@@ -16,17 +17,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   constructor() {
     const secret = process.env.JWT_SECRET;
-    
+
     if (!secret) {
       throw new Error(
-        'JWT_SECRET must be defined in environment variables. ' +
-        'Please check your .env file and ensure JWT_SECRET is set.'
+        "JWT_SECRET must be defined in environment variables. " +
+          "Please check your .env file and ensure JWT_SECRET is set."
       );
     }
 
     if (secret.length < 32) {
       throw new Error(
-        'JWT_SECRET must be at least 32 characters long for security reasons.'
+        "JWT_SECRET must be at least 32 characters long for security reasons."
       );
     }
 
@@ -39,12 +40,45 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     try {
-      // Validar usuario contra base de datos real
-      const user = await getUserById(payload.sub);
+      // Log para debugging
+      this.logger.debug(
+        "🔐 JWT Validation - Payload:",
+        JSON.stringify(payload)
+      );
+
+      const authMock =
+        String(process.env.AUTH_MOCK || "false").toLowerCase() === "true";
+      this.logger.debug(`🔐 Auth mode: ${authMock ? "MOCK" : "REAL"}`);
+
+      let user: any;
+
+      if (authMock) {
+        const mock = MockAuthStore.findById(payload.sub);
+        if (!mock) {
+          throw new UnauthorizedException("User not authorized or inactive");
+        }
+        user = {
+          id: mock.id,
+          email: mock.email,
+          first_name: mock.first_name,
+          last_name: mock.last_name,
+          role: mock.role,
+          center_id: mock.center_id,
+          active: mock.active,
+        };
+      } else {
+        // Validar usuario contra base de datos real
+        this.logger.debug(`🔐 Fetching user from DB with ID: ${payload.sub}`);
+        user = await getUserById(payload.sub);
+        this.logger.debug(`🔐 User found:`, user ? "YES" : "NO");
+      }
 
       if (!user?.active) {
+        this.logger.warn(`🔐 User ${payload.sub} is inactive or not found`);
         throw new UnauthorizedException("User not authorized or inactive");
       }
+
+      this.logger.debug(`🔐 User validated successfully: ${user.email}`);
 
       // Return the user (attached to request.user)
       return {

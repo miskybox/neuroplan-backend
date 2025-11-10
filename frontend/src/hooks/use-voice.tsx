@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { logger } from "@/utils/logger";
+import { logger } from "../utils/logger";
 
 /**
  * Custom hook for text-to-speech functionality
@@ -9,20 +9,40 @@ export const useVoice = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
+  const getSpeechSynthesis = (): SpeechSynthesis | undefined => {
+    if (
+      typeof globalThis !== "undefined" &&
+      (globalThis as any).speechSynthesis
+    ) {
+      return (globalThis as any).speechSynthesis as SpeechSynthesis;
+    }
+    return undefined;
+  };
+
   // Check if speech synthesis is supported
   useEffect(() => {
-    setIsSupported("speechSynthesis" in window);
+    const supported =
+      typeof globalThis !== "undefined" &&
+      !!(globalThis as any).speechSynthesis &&
+      typeof (globalThis as any).SpeechSynthesisUtterance === "function";
+
+    setIsSupported(supported);
+    if (!supported) {
+      setIsSpeaking(false);
+    }
   }, []);
 
   const speak = useCallback(
     (text: string) => {
-      if (!isSupported) {
+      const synth = getSpeechSynthesis();
+
+      if (!isSupported || !synth) {
         logger.warn("Speech synthesis is not supported in this browser");
         return;
       }
 
       // Stop any current speech
-      window.speechSynthesis.cancel();
+      synth.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
 
@@ -40,19 +60,20 @@ export const useVoice = () => {
         setIsSpeaking(false);
       };
 
-      utterance.onerror = (event) => {
-        logger.error("Speech synthesis error:", event.error);
+      utterance.onerror = (event: any) => {
+        logger.error("Speech synthesis error:", event?.error || event);
         setIsSpeaking(false);
       };
 
-      window.speechSynthesis.speak(utterance);
+      synth.speak(utterance);
     },
     [isSupported]
   );
 
   const stopSpeaking = useCallback(() => {
-    if (isSupported) {
-      window.speechSynthesis.cancel();
+    const synth = getSpeechSynthesis();
+    if (isSupported && synth) {
+      synth.cancel();
       setIsSpeaking(false);
     }
   }, [isSupported]);

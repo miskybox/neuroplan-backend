@@ -86,9 +86,25 @@ export default defineConfig({
     },
   ],
 
-  // Servidor de desarrollo (opcional, si queremos que Playwright lo arranque)
-  webServer: process.env.CI
-    ? undefined
+  // Servidores gestionados por Playwright
+  // - En local: arranca el frontend (Vite)
+  // - En CI: arranca el backend NestJS para los tests de API
+  webServer: (process.env.CI || process.env.PW_API)
+    ? {
+        command: "npm run start:dev",
+        url: "http://localhost:3001/api",
+        reuseExistingServer: true,
+        timeout: 120 * 1000,
+        cwd: "../backend",
+        env: {
+          PORT: "3001",
+          AUTH_MOCK: "true",
+          NODE_ENV: "test",
+          // Debe tener >=32 chars y no ser el valor por defecto
+          JWT_SECRET:
+            "pw_test_jwt_secret_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        },
+      }
     : {
         command: "npm run dev",
         url: "http://localhost:5173",

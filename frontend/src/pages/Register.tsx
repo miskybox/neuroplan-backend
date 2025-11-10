@@ -395,9 +395,10 @@ const Register = () => {
 
       logger.debug("Respuesta del registro:", response);
 
-      // authService.register ya hace .then(res => res.data), así que response es el objeto directo
-      const token = response?.accessToken || response?.token;
-      const user = response?.user;
+      // Backend envuelve en { success, data: { accessToken, user }, message }
+      const token =
+        response?.data?.accessToken || response?.accessToken || response?.token;
+      const user = response?.data?.user || response?.user;
 
       if (token && user) {
         // Registro completamente exitoso con token y usuario

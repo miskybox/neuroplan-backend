@@ -12,6 +12,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
 import { ExtractModule } from "./extract/extract.module";
 import { AppController } from "./app.controller";
 import { StudentsModule } from "./modules/students/students.module";
+import { VideosModule } from "./modules/videos/videos.module";
 import { AllExceptionsFilter } from "./filters/all-exceptions.filter";
 import { validateEnv } from "./config/env.validation";
 
@@ -56,6 +57,9 @@ import { validateEnv } from "./config/env.validation";
 
     // Módulo de estudiantes
     StudentsModule,
+
+    // Módulo de videos educativos
+    VideosModule,
 
     // Base de datos
     SupabaseModule,

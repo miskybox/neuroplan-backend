@@ -81,14 +81,24 @@ export function PdfUploadComponent() {
     formData.append("analysisType", analysisType);
 
     try {
+      logger.info("📤 Enviando PDF para análisis:", {
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        analysisType,
+      });
+
       const result = await analyzePdf<{
         success: boolean;
         analysis: PdfAnalysisResult;
         message: string;
       }>(formData);
+
+      logger.info("📥 Respuesta recibida:", result);
+
       if (result.success && (result.data as any).analysis) {
         const payload = (result.data as any).analysis;
         setAnalysisResult(payload);
+        logger.info("✅ Análisis completado exitosamente");
       } else {
         const errorMsg =
           (result.data as any)?.message || "Respuesta inesperada del servidor";
@@ -96,10 +106,27 @@ export function PdfUploadComponent() {
         throw new Error(errorMsg);
       }
     } catch (err: any) {
-      logger.error("Error analyzing PDF:", err);
-      const errorMsg =
-        err?.message ||
-        "Error al analizar el PDF. Verifica que el backend esté corriendo.";
+      logger.error("❌ Error analyzing PDF:", err);
+
+      // Mensaje de error más descriptivo
+      let errorMsg = "Error al analizar el PDF";
+
+      if (err?.code === "ECONNABORTED" || err?.message?.includes("timeout")) {
+        errorMsg =
+          "El análisis tardó demasiado. Intenta con un archivo más pequeño o verifica que Ollama esté corriendo.";
+      } else if (err?.response?.status === 400) {
+        errorMsg =
+          err?.response?.data?.message ||
+          "Archivo inválido. Solo se permiten archivos PDF.";
+      } else if (err?.response?.status === 401) {
+        errorMsg = "Error de autenticación. Vuelve a iniciar sesión.";
+      } else if (!err?.response) {
+        errorMsg =
+          "No se puede conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:3001";
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+
       throw new Error(errorMsg);
     }
   };

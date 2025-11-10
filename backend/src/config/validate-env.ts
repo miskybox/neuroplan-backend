@@ -7,12 +7,14 @@ const logger = new Logger('EnvValidator');
  * y tengan valores seguros antes de iniciar la aplicación
  */
 export function validateRequiredEnvVars(): void {
-  const required = [
-    'JWT_SECRET',
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-  ];
+  const authMock = String(process.env.AUTH_MOCK || 'false').toLowerCase() === 'true';
+
+  const required = ['JWT_SECRET'];
+
+  // Solo exigir Supabase si no estamos en modo AUTH_MOCK
+  if (!authMock) {
+    required.push('SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY');
+  }
 
   const missing = required.filter((key) => !process.env[key]);
 
@@ -42,4 +44,8 @@ export function validateRequiredEnvVars(): void {
 
   logger.log('✅ Environment variables validated successfully');
 }
+
+
+
+
 

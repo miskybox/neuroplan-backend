@@ -1,30 +1,30 @@
 // Enums
 export enum ReportType {
-  MEDICAL = 'MEDICAL',
-  PSYCHOLOGICAL = 'PSYCHOLOGICAL',
-  EDUCATIONAL = 'EDUCATIONAL',
-  OTHER = 'OTHER'
+  MEDICAL = "MEDICAL",
+  PSYCHOLOGICAL = "PSYCHOLOGICAL",
+  EDUCATIONAL = "EDUCATIONAL",
+  OTHER = "OTHER",
 }
 
 export enum PEIStatus {
-  DRAFT = 'draft',
-  PENDING_REVIEW = 'pending_review',
-  APPROVED = 'approved',
-  IN_IMPLEMENTATION = 'in_implementation',
-  ARCHIVED = 'archived'
+  DRAFT = "DRAFT",
+  REVIEW = "REVIEW",
+  APPROVED = "APPROVED",
+  ACTIVE = "ACTIVE",
+  ARCHIVED = "ARCHIVED",
 }
 
 export enum AudioType {
-  FULL_PEI = 'full_pei',
-  SUMMARY = 'summary',
-  SECTION = 'section'
+  FULL_PEI = "full_pei",
+  SUMMARY = "summary",
+  SECTION = "section",
 }
 
 export enum WorkflowStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  COMPLETED = 'completed',
-  FAILED = 'failed'
+  PENDING = "pending",
+  RUNNING = "running",
+  COMPLETED = "completed",
+  FAILED = "failed",
 }
 
 // Interfaces principales

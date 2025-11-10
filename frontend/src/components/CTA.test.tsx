@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { CTA as Cta } from "./CTA";
@@ -11,12 +10,13 @@ describe("CTA component", () => {
       </MemoryRouter>
     );
 
-    expect(
-      screen.getByText(/Obtén tu titulación oficial homologada/i)
-    ).toBeInTheDocument();
+    // Verificar que los elementos existen (sin toBeInTheDocument)
+    const title = screen.queryByText(/Obtén tu titulación oficial homologada/i);
+    expect(title).not.toBeNull();
 
-    expect(
-      screen.getByRole("button", { name: /Crear mi Perfil NeuroAcadémico/i })
-    ).toBeInTheDocument();
+    const button = screen.queryByRole("button", {
+      name: /Crear mi Perfil NeuroAcadémico/i,
+    });
+    expect(button).not.toBeNull();
   });
 });

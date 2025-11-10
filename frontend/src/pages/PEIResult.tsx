@@ -170,11 +170,6 @@ const PEIResult = () => {
     logger.debug(`Descargando: ${documentName}`);
   };
 
-  const handleShare = () => {
-    // Simular compartir
-    logger.debug("Compartiendo PEI");
-  };
-
   const handlePrint = () => {
     window.print();
   };

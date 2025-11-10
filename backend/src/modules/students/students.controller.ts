@@ -10,10 +10,20 @@ import {
   BadRequestException,
   NotFoundException,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from "@nestjs/swagger";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiBearerAuth,
+  ApiResponse as SwaggerResponse,
+} from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { DatabaseService } from "../supabase/database.service";
+import { ResponseHelper, ApiResponse } from "../../utils/response.helper";
+import { mapStudent, mapStudents } from "./student.mapper";
 
 interface StudentDto {
   id?: string;
@@ -30,17 +40,42 @@ interface StudentDto {
 
 @ApiTags("Students")
 @Controller("students")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class StudentsController {
   constructor(private readonly databaseService: DatabaseService) {}
 
   @Get()
+  @Roles("ADMIN", "ORIENTADOR", "PROFESOR", "DIRECTOR_CENTRO")
   @ApiOperation({
     summary: "Listar estudiantes",
     description: "Obtener lista de estudiantes del usuario autenticado",
   })
-  async findAll(@CurrentUser() user: any) {
+  @SwaggerResponse({
+    status: 200,
+    description: "Lista de estudiantes",
+    schema: {
+      example: {
+        success: true,
+        data: {
+          students: [
+            {
+              id: "st_123",
+              person_id: "p_123",
+              center_id: "c_123",
+              first_name: "María",
+              last_name: "García López",
+            },
+          ],
+          count: 1,
+        },
+        timestamp: "2025-11-09T12:00:00.000Z",
+      },
+    },
+  })
+  async findAll(
+    @CurrentUser() user: any
+  ): Promise<ApiResponse<{ students: any[]; count: number }>> {
     try {
       const userId = user.id || user.userId;
       const { data: students, error } =
@@ -48,18 +83,13 @@ export class StudentsController {
 
       if (error) throw new BadRequestException(error.message);
 
-      // Transformar datos para compatibilidad
-      const transformedStudents = (students || []).map((student: any) => ({
-        ...student,
-        first_name: student.persons?.first_name || null,
-        last_name: student.persons?.last_name || null,
-      }));
+      // Transformar datos para compatibilidad con mapper centralizado
+      const transformedStudents = mapStudents(students as any[]);
 
-      return {
-        success: true,
+      return ResponseHelper.success({
         students: transformedStudents,
         count: transformedStudents.length,
-      };
+      });
     } catch (error) {
       console.error("Error getting students:", error);
       throw new BadRequestException(
@@ -69,16 +99,38 @@ export class StudentsController {
   }
 
   @Get(":id")
+  @Roles("ADMIN", "ORIENTADOR", "PROFESOR", "DIRECTOR_CENTRO")
   @ApiOperation({
     summary: "Obtener estudiante",
     description: "Obtener detalles de un estudiante específico",
   })
-  async findOne(@Param("id") id: string, @CurrentUser() user: any) {
+  @SwaggerResponse({
+    status: 200,
+    description: "Detalle de estudiante",
+    schema: {
+      example: {
+        success: true,
+        data: {
+          id: "st_123",
+          person_id: "p_123",
+          center_id: "c_123",
+          first_name: "María",
+          last_name: "García López",
+        },
+        timestamp: "2025-11-09T12:00:00.000Z",
+      },
+    },
+  })
+  async findOne(
+    @Param("id") id: string,
+    @CurrentUser() user: any
+  ): Promise<ApiResponse<any>> {
     const userId = user.id || user.userId;
     const { data, error } = await this.databaseService
       .getClient()
       .from("students")
-      .select(`
+      .select(
+        `
         *,
         persons!person_id (
           id,
@@ -90,7 +142,8 @@ export class StudentsController {
           name,
           address
         )
-      `)
+      `
+      )
       .eq("id", id)
       .eq("created_by", userId)
       .single();
@@ -98,17 +151,14 @@ export class StudentsController {
     if (error) throw new BadRequestException(error.message);
     if (!data) throw new NotFoundException("Estudiante no encontrado");
 
-    // Transformar datos para compatibilidad
-    const student = {
-      ...data,
-      first_name: data.persons?.first_name || null,
-      last_name: data.persons?.last_name || null,
-    };
+    // Transformar datos para compatibilidad con mapper centralizado
+    const student = mapStudent(data as any);
 
-    return { success: true, student };
+    return ResponseHelper.success(student);
   }
 
   @Post()
+  @Roles("ADMIN", "ORIENTADOR", "PROFESOR")
   @ApiOperation({
     summary: "Crear estudiante",
     description: "Crear un nuevo estudiante asociado al usuario autenticado",
@@ -131,19 +181,22 @@ export class StudentsController {
       required: ["name"],
     },
   })
-  async create(@CurrentUser() user: any, @Body() studentDto: StudentDto) {
+  async create(
+    @CurrentUser() user: any,
+    @Body() studentDto: StudentDto
+  ): Promise<ApiResponse<any>> {
     try {
       const userId = user.id || user.userId;
-      
+
       // Validar campos requeridos
       if (!studentDto.first_name || !studentDto.last_name) {
-        throw new BadRequestException('first_name y last_name son requeridos');
+        throw new BadRequestException("first_name y last_name son requeridos");
       }
-      
+
       // Crear persona primero
       const { data: person, error: personError } = await this.databaseService
         .getClient()
-        .from('persons')
+        .from("persons")
         .insert({
           first_name: studentDto.first_name,
           last_name: studentDto.last_name,
@@ -152,7 +205,9 @@ export class StudentsController {
         .single();
 
       if (personError) {
-        throw new BadRequestException('Error al crear persona: ' + personError.message);
+        throw new BadRequestException(
+          "Error al crear persona: " + personError.message
+        );
       }
 
       // Crear estudiante con person_id (esquema normalizado: solo person_id, center_id, created_by)
@@ -167,20 +222,21 @@ export class StudentsController {
 
       if (error) throw new BadRequestException(error.message);
 
-      // Transformar respuesta para compatibilidad
-      const studentResponse = {
-        ...data,
-        first_name: data.persons?.first_name || studentDto.first_name,
-        last_name: data.persons?.last_name || studentDto.last_name,
-        // Nota: grade, parent_email, etc. ya no existen en el esquema normalizado
-        // Si se necesitan, deberían guardarse en otra tabla o en la tabla persons
-      };
+      // Transformar respuesta para compatibilidad con mapper centralizado
+      const studentResponse = mapStudent({
+        ...(data as any),
+        // fallback si no viniera persons del insert
+        persons: data?.persons ?? {
+          id: (data as any)?.person_id,
+          first_name: studentDto.first_name,
+          last_name: studentDto.last_name,
+        },
+      } as any);
 
-      return {
-        success: true,
-        student: studentResponse,
-        message: "Estudiante creado correctamente",
-      };
+      return ResponseHelper.created(
+        studentResponse,
+        "Estudiante creado correctamente"
+      );
     } catch (error) {
       console.error("Error creating student:", error);
       throw new BadRequestException(
@@ -190,32 +246,54 @@ export class StudentsController {
   }
 
   @Put(":id")
+  @Roles("ADMIN", "ORIENTADOR")
   @ApiOperation({
     summary: "Actualizar estudiante",
     description: "Actualizar datos de un estudiante existente",
+  })
+  @SwaggerResponse({
+    status: 200,
+    description: "Estudiante actualizado",
+    schema: {
+      example: {
+        success: true,
+        data: {
+          id: "st_123",
+          person_id: "p_123",
+          center_id: "c_789",
+          first_name: "María",
+          last_name: "García López",
+        },
+        message: "Estudiante actualizado correctamente",
+        timestamp: "2025-11-09T12:00:00.000Z",
+      },
+    },
   })
   async update(
     @Param("id") id: string,
     @Body() studentDto: StudentDto,
     @CurrentUser() user: any
-  ) {
+  ): Promise<ApiResponse<any>> {
     const userId = user.id || user.userId;
 
     // Verificar que el estudiante pertenece al usuario
-    const { data: existingStudent, error: fetchError } = await this.databaseService
-      .getClient()
-      .from("students")
-      .select(`
+    const { data: existingStudent, error: fetchError } =
+      await this.databaseService
+        .getClient()
+        .from("students")
+        .select(
+          `
         *,
         persons!person_id (
           id,
           first_name,
           last_name
         )
-      `)
-      .eq("id", id)
-      .eq("created_by", userId)
-      .single();
+      `
+        )
+        .eq("id", id)
+        .eq("created_by", userId)
+        .single();
 
     if (fetchError || !existingStudent) {
       throw new NotFoundException("Estudiante no encontrado");
@@ -226,7 +304,8 @@ export class StudentsController {
       const personId = existingStudent.person_id;
       if (personId) {
         const personUpdate: any = {};
-        if (studentDto.first_name) personUpdate.first_name = studentDto.first_name;
+        if (studentDto.first_name)
+          personUpdate.first_name = studentDto.first_name;
         if (studentDto.last_name) personUpdate.last_name = studentDto.last_name;
 
         await this.databaseService
@@ -251,7 +330,8 @@ export class StudentsController {
       .update(studentUpdate)
       .eq("id", id)
       .eq("created_by", userId)
-      .select(`
+      .select(
+        `
         *,
         persons!person_id (
           id,
@@ -263,31 +343,43 @@ export class StudentsController {
           name,
           address
         )
-      `)
+      `
+      )
       .single();
 
     if (error) throw new BadRequestException(error.message);
 
-    // Transformar datos para compatibilidad
-    const student = {
-      ...data,
-      first_name: data.persons?.first_name || null,
-      last_name: data.persons?.last_name || null,
-    };
+    // Transformar datos para compatibilidad con mapper centralizado
+    const student = mapStudent(data);
 
-    return {
-      success: true,
+    return ResponseHelper.updated(
       student,
-      message: "Estudiante actualizado correctamente",
-    };
+      "Estudiante actualizado correctamente"
+    );
   }
 
   @Delete(":id")
+  @Roles("ADMIN", "ORIENTADOR")
   @ApiOperation({
     summary: "Eliminar estudiante",
     description: "Eliminar un estudiante existente",
   })
-  async remove(@Param("id") id: string, @CurrentUser() user: any) {
+  @SwaggerResponse({
+    status: 200,
+    description: "Estudiante eliminado",
+    schema: {
+      example: {
+        success: true,
+        data: null,
+        message: "Estudiante eliminado correctamente",
+        timestamp: "2025-11-09T12:00:00.000Z",
+      },
+    },
+  })
+  async remove(
+    @Param("id") id: string,
+    @CurrentUser() user: any
+  ): Promise<ApiResponse<any>> {
     const userId = user.id || user.userId;
 
     // Verificar que el estudiante pertenece al usuario
@@ -312,9 +404,6 @@ export class StudentsController {
 
     if (error) throw new BadRequestException(error.message);
 
-    return {
-      success: true,
-      message: "Estudiante eliminado correctamente",
-    };
+    return ResponseHelper.deleted("Estudiante eliminado correctamente");
   }
 }

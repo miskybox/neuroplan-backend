@@ -41,8 +41,9 @@ test.describe("Uploads API E2E Tests", () => {
 
       expect(response.status()).toBe(200);
       const body = await response.json();
+      const data = body.data ?? body;
       expect(body.success).toBe(true);
-      expect(body.message).toContain("funcionando");
+      expect((data.message ?? body.message) as string).toContain("funcionando");
     });
 
     test("should reject /uploads/pdf-analysis without authentication", async ({
@@ -77,14 +78,16 @@ test.describe("Uploads API E2E Tests", () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      const data = body.data ?? body;
 
       expect(body.success).toBe(true);
-      expect(body.message).toContain("exitosamente");
-      expect(body.analysis).toBeDefined();
-      expect(body.analysis.analysis).toHaveProperty("summary");
-      expect(body.analysis.analysis).toHaveProperty("recommendations");
-      expect(body.analysis.analysis).toHaveProperty("keyPoints");
-      expect(body.analysis.analysis).toHaveProperty("confidence");
+      expect((data.message ?? body.message) as string).toContain("exitosamente");
+      const analysisRoot = (data.analysis ?? body.analysis);
+      expect(analysisRoot).toBeDefined();
+      expect(analysisRoot.analysis).toHaveProperty("summary");
+      expect(analysisRoot.analysis).toHaveProperty("recommendations");
+      expect(analysisRoot.analysis).toHaveProperty("keyPoints");
+      expect(analysisRoot.analysis).toHaveProperty("confidence");
 
       // Verificar estructura del análisis simulado
       expect(Array.isArray(body.analysis.analysis.recommendations)).toBe(true);
@@ -175,7 +178,12 @@ test.describe("Uploads API E2E Tests", () => {
       // Si Ollama está disponible y tiene modelos
       if (body.models.length > 0) {
         const model = body.models[0];
-        expect(model).toHaveProperty("name");
+        // El backend puede devolver nombres como strings o objetos con 'name'
+        if (typeof model === "string") {
+          expect(model.length).toBeGreaterThan(0);
+        } else {
+          expect(model).toHaveProperty("name");
+        }
       }
     });
 
@@ -340,7 +348,7 @@ test.describe("Uploads API E2E Tests", () => {
             analysisData: {
               studentName: "Estudiante E2E Test",
               analysisDate: new Date().toISOString(),
-              ...analysisBody.analysis.analysis,
+              ...((analysisBody.data ?? analysisBody).analysis.analysis),
             },
           },
         }
