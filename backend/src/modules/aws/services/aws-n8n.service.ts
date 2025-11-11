@@ -3,6 +3,34 @@ import { HttpService } from '../../../common/http/http.service';
 import { AxiosError } from 'axios';
 
 /**
+ * Interfaces para tipado de respuestas N8N
+ */
+interface N8nWorkflowResponse {
+  executionId: string;
+  status: string;
+  data?: any;
+}
+
+interface N8nExecutionResult {
+  id: string;
+  status: string;
+  progress?: number;
+  data?: any;
+  error?: string;
+}
+
+interface N8nExecutionsResponse {
+  data: Array<{
+    id: string;
+    workflowId: string;
+    status: string;
+    startedAt: string;
+    finishedAt?: string;
+    data: any;
+  }>;
+}
+
+/**
  * N8N Service
  * Integración con N8N para automatización de workflows
  */
@@ -40,7 +68,7 @@ export class AwsN8nService {
     }
 
     try {
-      const { data: result } = await this.httpService.post(
+      const { data: result } = await this.httpService.post<N8nWorkflowResponse>(
         `${this.n8nUrl}/api/v1/workflows/${workflowId}/execute`,
         {
           data,
@@ -92,7 +120,7 @@ export class AwsN8nService {
         ? `${this.n8nUrl}/api/v1/executions?workflowId=${workflowId}&limit=${limit}`
         : `${this.n8nUrl}/api/v1/executions?limit=${limit}`;
 
-      const { data: result } = await this.httpService.get(url, {
+      const { data: result } = await this.httpService.get<N8nExecutionsResponse>(url, {
         headers: {
           'X-N8N-API-KEY': this.apiKey,
         },
@@ -127,7 +155,7 @@ export class AwsN8nService {
     }
 
     try {
-      const { data: result } = await this.httpService.get(
+      const { data: result } = await this.httpService.get<N8nExecutionResult>(
         `${this.n8nUrl}/api/v1/executions/${executionId}`,
         {
           headers: {

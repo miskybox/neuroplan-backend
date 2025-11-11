@@ -3,6 +3,21 @@ import { HttpService } from '../../../common/http/http.service';
 import { AxiosError } from 'axios';
 
 /**
+ * Interfaces para tipado de respuestas ElevenLabs
+ */
+interface ElevenLabsVoicesResponse {
+  voices: Array<{
+    voice_id: string;
+    name: string;
+    labels?: {
+      language?: string;
+      gender?: string;
+      description?: string;
+    };
+  }>;
+}
+
+/**
  * ElevenLabs Service
  * Integración con ElevenLabs para text-to-speech de alta calidad
  */
@@ -63,7 +78,7 @@ export class AwsElevenlabsService {
         }
       );
 
-      const audioBuffer = data;
+      const audioBuffer = data as ArrayBuffer;
       const audioUrl = await this.uploadAudioToS3(audioBuffer, voiceId);
       const duration = this.estimateDuration(text);
 
@@ -138,7 +153,7 @@ export class AwsElevenlabsService {
     }
 
     try {
-      const { data } = await this.httpService.get(`${this.baseUrl}/voices`, {
+      const { data } = await this.httpService.get<ElevenLabsVoicesResponse>(`${this.baseUrl}/voices`, {
         headers: {
           'Accept': 'application/json',
           'xi-api-key': this.apiKey,
