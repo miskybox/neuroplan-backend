@@ -7,6 +7,7 @@ import React, {
   useMemo,
 } from "react";
 import { authService } from "../services/neuroplanApi";
+import type { AuthUser } from "../services/neuroplanApi";
 import { logger } from "@/utils/logger";
 
 interface User {
@@ -42,6 +43,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Normaliza el usuario de la API (AuthUser) al modelo interno User
+  function mapAuthUserToUser(raw: AuthUser): User {
+    return {
+      id: String(raw.id),
+      email: raw.email,
+      nombre: raw.firstName || "",
+      apellidos: raw.lastName || "",
+      // El backend aún no provee perfilNeuroAcademico; se podrá hidratar luego
+    };
+  }
+
   // Verificar si hay una sesión guardada al cargar la aplicación
   useEffect(() => {
     const checkAuth = async () => {
@@ -69,6 +81,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
 
+    // Timeout de seguridad corto (fallback rápido en dev)
+    const safetyTimeout = setTimeout(() => {
+      logger.warn("Login timeout (8s) - fallback to demo user");
+      // Activamos fallback demo si todavía no hay usuario
+      if (!user) {
+        const demoUser: User = {
+          id: "demo-fallback",
+          email,
+          nombre: "Usuario",
+          apellidos: "Demo",
+          perfilNeuroAcademico: {
+            nivelActual: "Bachillerato",
+            objetivosAcademicos: "Acceder a la universidad",
+            fortalezas: ["Memoria visual", "Pensamiento lógico"],
+            areasApoyo: ["Atención", "Organización"],
+            preferenciasSensoriales: ["Visual", "Interactivo"],
+          },
+        };
+        setUser(demoUser);
+        localStorage.setItem("neuroplan_user", JSON.stringify(demoUser));
+        localStorage.setItem("authToken", "demo_token_" + Date.now());
+      }
+      setIsLoading(false);
+    }, 8000); // 8 segundos
+
     try {
       // Intentar login con el backend (si está disponible)
       try {
@@ -76,9 +113,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // authService.login ya hace .then(res => res.data), así que response es el objeto directo
         const token = response.accessToken || response.token;
         if (token && response.user) {
+          const mapped = mapAuthUserToUser(response.user);
           localStorage.setItem("authToken", token);
-          setUser(response.user);
-          localStorage.setItem("neuroplan_user", JSON.stringify(response.user));
+          setUser(mapped);
+          localStorage.setItem("neuroplan_user", JSON.stringify(mapped));
+          clearTimeout(safetyTimeout);
           return true;
         }
       } catch (backendError) {
@@ -88,33 +127,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         );
       }
 
-      // Fallback: Simulamos login para demo (cuando backend no esté disponible)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Simular datos de usuario para demo
-      const userData: User = {
-        id: "1",
-        email,
-        nombre: "Usuario",
-        apellidos: "Demo",
-        perfilNeuroAcademico: {
-          nivelActual: "Bachillerato",
-          objetivosAcademicos: "Acceder a la universidad",
-          fortalezas: ["Memoria visual", "Pensamiento lógico"],
-          areasApoyo: ["Atención", "Organización"],
-          preferenciasSensoriales: ["Visual", "Interactivo"],
-        },
-      };
-
-      setUser(userData);
-      localStorage.setItem("neuroplan_user", JSON.stringify(userData));
-      localStorage.setItem("authToken", "demo_token_" + Date.now());
-
-      return true;
+      // Fallback manual sólo si no se logró login y no se activó por timeout
+      if (!user) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        const demoUser: User = {
+          id: "demo-local",
+          email,
+          nombre: "Usuario",
+          apellidos: "Demo",
+          perfilNeuroAcademico: {
+            nivelActual: "Bachillerato",
+            objetivosAcademicos: "Acceder a la universidad",
+            fortalezas: ["Memoria visual", "Pensamiento lógico"],
+            areasApoyo: ["Atención", "Organización"],
+            preferenciasSensoriales: ["Visual", "Interactivo"],
+          },
+        };
+        setUser(demoUser);
+        localStorage.setItem("neuroplan_user", JSON.stringify(demoUser));
+        localStorage.setItem("authToken", "demo_token_" + Date.now());
+        clearTimeout(safetyTimeout);
+        return true;
+      }
+      clearTimeout(safetyTimeout);
+      return !!user;
     } catch (error) {
       logger.error("Login error:", error);
+      clearTimeout(safetyTimeout);
       return false;
     } finally {
+      clearTimeout(safetyTimeout);
       setIsLoading(false);
     }
   };
