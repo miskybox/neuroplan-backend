@@ -40,3 +40,7 @@ test-*.json
 env.temp
 env.supabase
 env.*.local
+
+# Windows reserved names
+nul
+
