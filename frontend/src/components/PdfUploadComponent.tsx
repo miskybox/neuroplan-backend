@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ApiMessageBanner } from "@/components/ApiMessageBanner";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -73,6 +73,17 @@ export function PdfUploadComponent() {
     multiple: false,
   });
 
+  type ApiAnalyzeResponse = {
+    success: boolean;
+    analysis: PdfAnalysisResult;
+    message: string;
+  };
+  type HttpErrorLike = {
+    message?: string;
+    code?: string;
+    response?: { status?: number; data?: { message?: string } };
+  };
+
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
@@ -87,44 +98,51 @@ export function PdfUploadComponent() {
         analysisType,
       });
 
-      const result = await analyzePdf<{
-        success: boolean;
-        analysis: PdfAnalysisResult;
-        message: string;
-      }>(formData);
+      const result = await analyzePdf<ApiAnalyzeResponse>(formData);
 
       logger.info("📥 Respuesta recibida:", result);
 
-      if (result.success && (result.data as any).analysis) {
-        const payload = (result.data as any).analysis;
+      if (result.success && result.data && "analysis" in result.data) {
+        const payload = (result.data as ApiAnalyzeResponse).analysis;
         setAnalysisResult(payload);
         logger.info("✅ Análisis completado exitosamente");
       } else {
         const errorMsg =
-          (result.data as any)?.message || "Respuesta inesperada del servidor";
+          (result.data as ApiAnalyzeResponse)?.message ||
+          "Respuesta inesperada del servidor";
         logger.error("Respuesta inesperada:", result.data);
         throw new Error(errorMsg);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("❌ Error analyzing PDF:", err);
 
-      // Mensaje de error más descriptivo
       let errorMsg = "Error al analizar el PDF";
+      const e = err as HttpErrorLike & { stack?: string };
 
-      if (err?.code === "ECONNABORTED" || err?.message?.includes("timeout")) {
-        errorMsg =
-          "El análisis tardó demasiado. Intenta con un archivo más pequeño o verifica que Ollama esté corriendo.";
-      } else if (err?.response?.status === 400) {
-        errorMsg =
-          err?.response?.data?.message ||
-          "Archivo inválido. Solo se permiten archivos PDF.";
-      } else if (err?.response?.status === 401) {
-        errorMsg = "Error de autenticación. Vuelve a iniciar sesión.";
-      } else if (!err?.response) {
+      // Caso con respuesta del servidor
+      if (e?.response) {
+        const status = e.response.status;
+        const serverMsg = e.response.data?.message;
+        if (status === 400) {
+          errorMsg =
+            serverMsg || "Archivo inválido. Solo se permiten archivos PDF.";
+        } else if (status === 401) {
+          errorMsg = "Error de autenticación. Vuelve a iniciar sesión.";
+        } else if (serverMsg) {
+          errorMsg = serverMsg;
+        }
+      } else if (
+        typeof e?.code === "string" &&
+        ["ERR_NETWORK", "ECONNREFUSED", "ECONNABORTED"].includes(e.code)
+      ) {
+        // Errores de red o timeout
         errorMsg =
           "No se puede conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:3001";
-      } else if (err?.message) {
-        errorMsg = err.message;
+      } else if (typeof e?.message === "string") {
+        errorMsg = e.message;
+      } else {
+        errorMsg =
+          "No se puede conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:3001";
       }
 
       throw new Error(errorMsg);
@@ -162,7 +180,7 @@ export function PdfUploadComponent() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error("Error generating PDF:", err);
     }
   };
@@ -187,11 +205,13 @@ export function PdfUploadComponent() {
       } else {
         alert("❌ Error: " + (data.message || "No se pudo conectar"));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMsg =
-        err?.response?.data?.message || err?.message || "Error de conexión";
+        (err as HttpErrorLike)?.response?.data?.message ||
+        (err as HttpErrorLike)?.message ||
+        "Error de conexión";
       logger.error("Error testing connection:", err);
-      alert("❌ Error de conexión: " + errorMsg);
+      alert("❌ Error de conexión: " + String(errorMsg));
     } finally {
       setTestingConnection(false);
     }
@@ -285,7 +305,7 @@ export function PdfUploadComponent() {
               onClick={async () => {
                 try {
                   await handleAnalyze();
-                } catch (err: any) {
+                } catch (err: unknown) {
                   // El error ya se maneja en useApiRequest y se muestra en el Alert
                   logger.error("Error en handleAnalyze:", err);
                 }
@@ -309,13 +329,10 @@ export function PdfUploadComponent() {
           </div>
 
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {" "}
-                Error al analizar el PDF: {error}{" "}
-              </AlertDescription>
-            </Alert>
+            <ApiMessageBanner
+              type="error"
+              message={`Error al analizar el PDF: ${error}`}
+            />
           )}
         </CardContent>
       </Card>

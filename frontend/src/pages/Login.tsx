@@ -1,22 +1,29 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ApiMessageBanner } from "@/components/ApiMessageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Brain, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+import {
+  Brain,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   ArrowRight,
   GraduationCap,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,17 +39,49 @@ const Login = () => {
     password: "",
     rememberMe: false,
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
+  // Usamos un div como región viva; referencia tipada correctamente para evitar conflicto con HTMLDivElement
+  const liveRegionRef = useRef<HTMLDivElement | null>(null);
+  const [apiMessage, setApiMessage] = useState<string | null>(null);
 
-  const handleInputChange = (field: keyof LoginFormData, value: any) => {
-    setFormData(prev => ({
+  // Escuchar eventos globales del interceptor de API
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent<{ type: string; message: string }>;
+      if (custom.detail?.type === "error") {
+        setApiMessage(custom.detail.message);
+        // Scroll para asegurar visibilidad
+        globalThis.scrollTo({ top: 0, behavior: "smooth" });
+        // Enfocar región para lectores de pantalla
+        setTimeout(() => liveRegionRef.current?.focus(), 80);
+        // Auto ocultar a los 4s
+        setTimeout(() => setApiMessage(null), 4000);
+      }
+    };
+    globalThis.addEventListener("api-message", handler);
+    return () => globalThis.removeEventListener("api-message", handler);
+  }, []);
+
+  // Cuando hay error propio del formulario, aplicar scroll y foco
+  useEffect(() => {
+    if (formError) {
+      globalThis.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => liveRegionRef.current?.focus(), 80);
+    }
+  }, [formError]);
+
+  const handleInputChange = (
+    field: keyof LoginFormData,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -73,11 +112,12 @@ const Login = () => {
 
     // Intentar login usando el contexto
     const success = await login(formData.email, formData.password);
-    
+
     if (success) {
       toast({
         title: "¡Bienvenido de vuelta!",
-        description: "Has iniciado sesión correctamente en tu Perfil NeuroAcadémico",
+        description:
+          "Has iniciado sesión correctamente en tu Perfil NeuroAcadémico",
       });
       setFormError(null);
       // Redirigir al dashboard
@@ -102,7 +142,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container py-12">
         <div className="max-w-md mx-auto">
           {/* Header */}
@@ -111,23 +151,37 @@ const Login = () => {
               <Brain className="h-4 w-4" />
               <span>Acceso a tu Perfil NeuroAcadémico</span>
             </div>
-            
+
             <h1 className="text-3xl md:text-4xl font-bold">
               Inicia sesión en{" "}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 NeuroPlan AI Campus
               </span>
             </h1>
-            
+
             <p className="text-lg text-muted-foreground">
-              Accede a tu itinerario personalizado y continúa tu camino hacia la titulación oficial
+              Accede a tu itinerario personalizado y continúa tu camino hacia la
+              titulación oficial
             </p>
           </div>
 
           {/* Login Card */}
-          {formError && (
-            <div className="mb-4 p-3 rounded bg-red-100 text-red-700 border border-red-300 text-center">
-              {formError}
+          {(formError || apiMessage) && (
+            <div
+              ref={liveRegionRef}
+              tabIndex={-1}
+              aria-live="polite"
+              aria-atomic="true"
+              className="mb-4"
+            >
+              <ApiMessageBanner
+                type="error"
+                message={formError || apiMessage || ""}
+                onClose={() => {
+                  setFormError(null);
+                  setApiMessage(null);
+                }}
+              />
             </div>
           )}
           <Card className="shadow-elegant">
@@ -137,10 +191,11 @@ const Login = () => {
               </div>
               <CardTitle className="text-2xl">Bienvenido de vuelta</CardTitle>
               <CardDescription>
-                Inicia sesión para acceder a tu Perfil NeuroAcadémico y continuar tu aprendizaje
+                Inicia sesión para acceder a tu Perfil NeuroAcadémico y
+                continuar tu aprendizaje
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Email */}
@@ -152,14 +207,16 @@ const Login = () => {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
                       placeholder="tu@email.com"
                       className="pl-10"
                       disabled={isLoading}
                     />
                   </div>
                 </div>
-                
+
                 {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
@@ -169,7 +226,9 @@ const Login = () => {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
                       placeholder="Tu contraseña"
                       className="pl-10 pr-10"
                       disabled={isLoading}
@@ -182,25 +241,31 @@ const Login = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       disabled={isLoading}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* Remember me & Forgot password */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="rememberMe"
                       checked={formData.rememberMe}
-                      onCheckedChange={(checked) => handleInputChange("rememberMe", checked)}
+                      onCheckedChange={(checked) =>
+                        handleInputChange("rememberMe", checked)
+                      }
                       disabled={isLoading}
                     />
                     <Label htmlFor="rememberMe" className="text-sm">
                       Recordarme
                     </Label>
                   </div>
-                  
+
                   <Button
                     type="button"
                     variant="link"
@@ -212,7 +277,7 @@ const Login = () => {
                     ¿Olvidaste tu contraseña?
                   </Button>
                 </div>
-                
+
                 {/* Submit Button */}
                 <Button
                   type="submit"
@@ -233,23 +298,22 @@ const Login = () => {
                   )}
                 </Button>
               </form>
-              
             </CardContent>
           </Card>
-          
+
           {/* Register Link */}
           <div className="text-center mt-6">
             <p className="text-muted-foreground">
               ¿No tienes cuenta?{" "}
-              <Link 
-                to="/registro" 
+              <Link
+                to="/registro"
                 className="text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 Crea tu Perfil NeuroAcadémico
               </Link>
             </p>
           </div>
-          
+
           {/* Features Preview */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center space-y-2 p-4 rounded-lg bg-muted/30">
@@ -257,28 +321,34 @@ const Login = () => {
                 <Brain className="h-4 w-4 text-primary" />
               </div>
               <h3 className="font-medium text-sm">PEI Engine</h3>
-              <p className="text-xs text-muted-foreground">Perfil personalizado</p>
+              <p className="text-xs text-muted-foreground">
+                Perfil personalizado
+              </p>
             </div>
-            
+
             <div className="text-center space-y-2 p-4 rounded-lg bg-muted/30">
               <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center mx-auto">
                 <GraduationCap className="h-4 w-4 text-secondary" />
               </div>
               <h3 className="font-medium text-sm">Learning Engine</h3>
-              <p className="text-xs text-muted-foreground">Contenido adaptativo</p>
+              <p className="text-xs text-muted-foreground">
+                Contenido adaptativo
+              </p>
             </div>
-            
+
             <div className="text-center space-y-2 p-4 rounded-lg bg-muted/30">
               <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                 <Sparkles className="h-4 w-4 text-accent" />
               </div>
               <h3 className="font-medium text-sm">Compliance Engine</h3>
-              <p className="text-xs text-muted-foreground">Titulación oficial</p>
+              <p className="text-xs text-muted-foreground">
+                Titulación oficial
+              </p>
             </div>
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

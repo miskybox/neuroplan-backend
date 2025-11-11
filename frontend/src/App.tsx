@@ -23,6 +23,7 @@ import BedrockDemo from "./pages/BedrockDemo";
 import WorkflowDemo from "./pages/WorkflowDemo";
 import PdfAnalysisPage from "./pages/PdfAnalysisPage";
 import NotFound from "./pages/NotFound";
+import { ApiMessageCenter } from "@/components/ApiMessageBanner";
 
 const queryClient = new QueryClient();
 
@@ -36,66 +37,52 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-                  <BrowserRouter
-                    future={{
-                      v7_startTransition: true,
-                      v7_relativeSplatPath: true,
-                    }}
-                  >
+            {/* Centro global de mensajes API accesibles */}
+            <div aria-live="polite" aria-atomic="true">
+              <ApiMessageCenter />
+            </div>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/registro" element={<Register />} />
                 <Route path="/login" element={<Login />} />
-                <Route 
-                  path="/dashboard" 
+                <Route
+                  path="/dashboard"
                   element={
                     <ProtectedRoute>
                       <Dashboard />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/perfil" 
+                <Route
+                  path="/perfil"
                   element={
                     <ProtectedRoute>
                       <Profile />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/itinerario" 
+                <Route
+                  path="/itinerario"
                   element={
                     <ProtectedRoute>
                       <Itinerary />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/recursos" 
-                  element={<Resources />}
-                />
-                <Route 
-                  path="/pei-engine" 
-                  element={<PEIEngine />}
-                />
-                <Route 
-                  path="/generate-pei" 
-                  element={<GeneratePEI />}
-                />
-                <Route 
-                  path="/pei-result" 
-                  element={<PEIResult />}
-                />
-                <Route 
-                  path="/bedrock-demo" 
-                  element={<BedrockDemo />}
-                />
-                <Route 
-                  path="/workflow-demo" 
-                  element={<WorkflowDemo />}
-                />
-                <Route 
-                  path="/pdf-analysis" 
+                <Route path="/recursos" element={<Resources />} />
+                <Route path="/pei-engine" element={<PEIEngine />} />
+                <Route path="/generate-pei" element={<GeneratePEI />} />
+                <Route path="/pei-result" element={<PEIResult />} />
+                <Route path="/bedrock-demo" element={<BedrockDemo />} />
+                <Route path="/workflow-demo" element={<WorkflowDemo />} />
+                <Route
+                  path="/pdf-analysis"
                   element={
                     <ProtectedRoute>
                       <PdfAnalysisPage />
@@ -106,17 +93,15 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-            
+
             {/* Panel de Accesibilidad */}
-            <AccessibilityPanel 
-              isOpen={isPanelOpen} 
-              onClose={() => setIsPanelOpen(false)} 
+            <AccessibilityPanel
+              isOpen={isPanelOpen}
+              onClose={() => setIsPanelOpen(false)}
             />
-            
+
             {/* Botón de Acceso */}
-            <AccessibilityTrigger 
-              onClick={() => setIsPanelOpen(true)} 
-            />
+            <AccessibilityTrigger onClick={() => setIsPanelOpen(true)} />
           </TooltipProvider>
         </AccessibilityProvider>
       </AuthProvider>

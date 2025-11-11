@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Download, ArrowLeft } from "lucide-react";
 import { logger } from "@/utils/logger";
+import { ApiMessageBanner } from "@/components/ApiMessageBanner";
 
 const PEIResult = () => {
   const navigate = useNavigate();
+  const liveRegionRef = useRef<HTMLDivElement | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Datos del PEI (en una implementación real, estos vendrían de la API)
   const [peiData] = useState({
@@ -168,10 +171,7 @@ const PEIResult = () => {
   const handleDownload = (documentName: string) => {
     // Simular descarga
     logger.debug(`Descargando: ${documentName}`);
-  };
-
-  const handlePrint = () => {
-    window.print();
+    setInfoMessage(`Descargando "${documentName}"...`);
   };
 
   const getStatusColor = (status: string) => {
@@ -187,28 +187,69 @@ const PEIResult = () => {
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
-  };
+  // Eliminada getScoreColor (no usada). Si se muestran puntuaciones en el futuro, reintroducir con mapeo de colores.
+
+  // Gestionar mensajes accesibles (aria-live + foco para lectores de pantalla)
+  useEffect(() => {
+    if (infoMessage) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Enfocar la región viva brevemente
+      setTimeout(() => {
+        liveRegionRef.current?.focus();
+      }, 80);
+      const t = setTimeout(() => setInfoMessage(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [infoMessage]);
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
       <main className="container mx-auto px-4 py-12">
-        {/* Contenido simple y visible */}
+        {/* Región de mensajes accesibles */}
+        {infoMessage && (
+          <div
+            ref={liveRegionRef}
+            tabIndex={-1}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <ApiMessageBanner
+              type="success"
+              message={infoMessage}
+              autoDismissMs={3000}
+            />
+          </div>
+        )}
+        {/* Navegación rápida */}
+        <nav aria-label="Secciones del PEI" className="max-w-4xl mx-auto mb-8">
+          <ul className="flex flex-wrap gap-4 text-sm">
+            <li>
+              <a href="#info" className="text-primary hover:underline">
+                Información
+              </a>
+            </li>
+            <li>
+              <a href="#docs" className="text-primary hover:underline">
+                Documentos
+              </a>
+            </li>
+          </ul>
+        </nav>
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             PEI Generado
           </h1>
 
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-lg text-gray-600 mb-4">
             Pasaporte Educativo Inteligente - {peiData.studentName}
           </p>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+          <div
+            id="info"
+            className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
+          >
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">
               Información del PEI
             </h2>
@@ -227,8 +268,18 @@ const PEIResult = () => {
                 <h3 className="text-lg font-medium text-gray-700 mb-2">
                   Estado del PEI
                 </h3>
-                <p className="text-gray-600">
-                  Estado: {peiData.status === "active" ? "Activo" : "Inactivo"}
+                <p className="text-gray-600 inline-flex items-center gap-2">
+                  <span>Estado:</span>{" "}
+                  <span
+                    className={`px-2 py-1 text-sm rounded border ${getStatusColor(
+                      peiData.status
+                    )}`}
+                    aria-label={`Estado del PEI: ${
+                      peiData.status === "active" ? "Activo" : "Inactivo"
+                    }`}
+                  >
+                    {peiData.status === "active" ? "Activo" : "Inactivo"}
+                  </span>
                 </p>
                 <p className="text-gray-600">
                   Generado:{" "}
@@ -250,21 +301,60 @@ const PEIResult = () => {
                   onClick={() => navigate(-1)}
                   variant="outline"
                   className="flex items-center gap-2"
+                  aria-label="Volver a la página anterior"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                   Volver
                 </Button>
 
                 <Button
                   onClick={() => handleDownload(peiData.id)}
                   className="flex items-center gap-2"
+                  aria-label={`Descargar PEI ${peiData.id}`}
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-4 w-4" aria-hidden="true" />
                   Descargar PEI
                 </Button>
               </div>
             </div>
           </div>
+          {/* Documentos */}
+          <section
+            id="docs"
+            aria-labelledby="docs-title"
+            className="mt-10 bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
+          >
+            <h2
+              id="docs-title"
+              className="text-2xl font-semibold text-gray-800 mb-4"
+            >
+              Documentos disponibles
+            </h2>
+            <ul className="divide-y divide-gray-200">
+              {peiData.documents.map((doc) => (
+                <li
+                  key={`${doc.name}-${doc.date}`}
+                  className="py-4 flex items-center justify-between"
+                >
+                  <div className="space-y-0.5">
+                    <p className="text-gray-900 font-medium">{doc.name}</p>
+                    <p className="text-gray-500 text-sm">
+                      {doc.type} · {doc.size} ·{" "}
+                      {new Date(doc.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => handleDownload(doc.name)}
+                    className="flex items-center gap-2"
+                    aria-label={`Descargar ${doc.name} (${doc.type})`}
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Descargar
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </main>
 

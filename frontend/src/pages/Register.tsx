@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -39,6 +39,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { logger } from "@/utils/logger";
+import { ApiMessageBanner } from "@/components/ApiMessageBanner";
 
 interface FormData {
   // Información personal
@@ -77,6 +78,19 @@ const Register = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Asegurar que el usuario vea los mensajes (éxito/error) haciendo scroll al inicio
+  useEffect(() => {
+    if (formError) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [formError]);
+
+  useEffect(() => {
+    if (formSuccess) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [formSuccess]);
 
   const [formData, setFormData] = useState<FormData>({
     nombre: "",
@@ -167,7 +181,10 @@ const Register = () => {
     "Flexible",
   ];
 
-  const handleInputChange = (field: keyof FormData, value: any) => {
+  const handleInputChange = <K extends keyof FormData>(
+    field: K,
+    value: FormData[K]
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -246,9 +263,16 @@ const Register = () => {
   // Helper to extract error message from response
 
   // Helper to handle successful registration
+  type RegisteredUser = {
+    id?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    [key: string]: unknown;
+  };
   const handleRegistrationSuccess = (
     token: string | undefined,
-    user: any,
+    user: RegisteredUser | undefined,
     fallbackMsg: string
   ) => {
     if (token) {
@@ -256,27 +280,32 @@ const Register = () => {
       if (user) {
         localStorage.setItem("neuroplan_user", JSON.stringify(user));
       }
-      setFormSuccess("¡Registro exitoso! Redirigiendo al login...");
+      setFormSuccess(
+        "¡Registro exitoso! Redirigiendo al login en 3 segundos..."
+      );
       setTimeout(() => {
         globalThis.location.href = "/login";
-      }, 1800);
+      }, 3000);
     } else if (user) {
-      setFormSuccess(fallbackMsg);
+      setFormSuccess(
+        fallbackMsg || "Usuario creado. Redirigiendo al login en 3 segundos..."
+      );
       setTimeout(() => {
         globalThis.location.href = "/login";
-      }, 1800);
+      }, 3000);
     }
   };
 
   // Helper to handle HTTP status errors
   const getHttpStatusErrorMsg = (
     status: number,
-    responseData?: any
+    responseData?: { message?: string | string[]; error?: string }
   ): string => {
     if (status === 400) {
+      const msg = responseData?.message;
+      const normalizedMsg = Array.isArray(msg) ? msg.join(", ") : msg;
       return (
-        responseData?.message ||
-        "Datos inválidos. Verifica la información ingresada."
+        normalizedMsg || "Datos inválidos. Verifica la información ingresada."
       );
     }
     if (status === 409) {
@@ -289,55 +318,63 @@ const Register = () => {
   };
 
   // Helper to extract error message from error object
-  const extractErrorMsg = (error: any): string => {
+  type HttpError = {
+    response?: {
+      data?: { message?: string | string[]; error?: string };
+      status?: number;
+    };
+    message?: string;
+    code?: string;
+    stack?: string;
+  };
+  const extractErrorMsg = (error: unknown): string => {
+    const err = error as HttpError;
     // Log completo del error para debugging
-    logger.error("Error completo:", error);
-    logger.error("Error response:", error?.response);
-    logger.error("Error response data:", error?.response?.data);
-    logger.error("Error message:", error?.message);
-    logger.error("Error code:", error?.code);
-    logger.error("Error status:", error?.response?.status);
+    logger.error("Error completo:", err);
+    logger.error("Error response:", err?.response);
+    logger.error("Error response data:", err?.response?.data);
+    logger.error("Error message:", err?.message);
+    logger.error("Error code:", err?.code);
+    logger.error("Error status:", err?.response?.status);
 
     // Mostrar el stack trace si está disponible
-    if (error?.stack) {
-      logger.error("Error stack:", error.stack);
+    if (err?.stack) {
+      logger.error("Error stack:", err.stack);
     }
 
     // Intentar obtener mensaje de error del backend
-    if (error?.response?.data?.message) {
-      if (Array.isArray(error.response.data.message)) {
-        return error.response.data.message.join(", ");
+    if (err?.response?.data?.message) {
+      const message = err.response.data.message;
+      if (Array.isArray(message)) {
+        return message.join(", ");
       }
-      return error.response.data.message;
+      return String(message);
     }
-    if (error?.response?.data?.error) {
-      return error.response.data.error;
+    if (err?.response?.data?.error) {
+      return err.response.data.error;
     }
 
     // Errores de conexión
-    if (error?.code === "ECONNREFUSED" || error?.code === "ERR_NETWORK") {
+    if (err?.code === "ECONNREFUSED" || err?.code === "ERR_NETWORK") {
       return "No se pudo conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:3001";
     }
 
     // Errores de timeout
-    if (error?.code === "ECONNABORTED") {
+    if (err?.code === "ECONNABORTED") {
       return "La solicitud tardó demasiado. Intenta de nuevo.";
     }
 
     // Errores HTTP
-    if (error?.response?.status) {
-      return getHttpStatusErrorMsg(
-        error.response.status,
-        error?.response?.data
-      );
+    if (err?.response?.status) {
+      return getHttpStatusErrorMsg(err.response.status, err?.response?.data);
     }
 
     // Mensaje genérico del error
-    if (error?.message) {
-      return error.message;
+    if (err?.message) {
+      return err.message;
     }
-    if (typeof error === "string") {
-      return error;
+    if (typeof err === "string") {
+      return err;
     }
     return "No se pudo registrar. Intenta de nuevo.";
   };
@@ -395,10 +432,26 @@ const Register = () => {
 
       logger.debug("Respuesta del registro:", response);
 
-      // Backend envuelve en { success, data: { accessToken, user }, message }
+      // Unificar la forma de acceder a los datos para evitar errores de tipo en TS
+      // Si el backend envuelve en { success, data: { accessToken, user } }, usamos response.data
+      // Si no, usamos la respuesta plana
+      const resUnknown: unknown = response;
+      const payload: unknown =
+        resUnknown &&
+        typeof resUnknown === "object" &&
+        "data" in (resUnknown as Record<string, unknown>)
+          ? (resUnknown as { data: unknown }).data
+          : resUnknown;
+      const record =
+        payload && typeof payload === "object"
+          ? (payload as Record<string, unknown>)
+          : {};
       const token =
-        response?.data?.accessToken || response?.accessToken || response?.token;
-      const user = response?.data?.user || response?.user;
+        (record as { accessToken?: string; token?: string }).accessToken ||
+        (record as { token?: string }).token;
+      const user =
+        (record as { user?: RegisteredUser; authUser?: RegisteredUser }).user ||
+        (record as { authUser?: RegisteredUser }).authUser;
 
       if (token && user) {
         // Registro completamente exitoso con token y usuario
@@ -422,7 +475,7 @@ const Register = () => {
         setFormError("No se pudo crear la cuenta. Intenta de nuevo.");
         setIsSubmitting(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error("Error en registro:", error);
       const errorMessage = extractErrorMsg(error);
       logger.error("Mensaje de error extraído:", errorMessage);
@@ -800,7 +853,7 @@ const Register = () => {
                   id="terminos"
                   checked={formData.terminos}
                   onCheckedChange={(checked) =>
-                    handleInputChange("terminos", checked)
+                    handleInputChange("terminos", !!checked)
                   }
                 />
                 <div className="space-y-1">
@@ -825,7 +878,7 @@ const Register = () => {
                   id="privacidad"
                   checked={formData.privacidad}
                   onCheckedChange={(checked) =>
-                    handleInputChange("privacidad", checked)
+                    handleInputChange("privacidad", !!checked)
                   }
                 />
                 <div className="space-y-1">
@@ -853,22 +906,34 @@ const Register = () => {
     }
   };
 
+  // Banner de mensajes en la parte superior
+  const Banners = (
+    <div className="mb-4">
+      {formError && (
+        <ApiMessageBanner
+          type="error"
+          message={formError}
+          onClose={() => setFormError(null)}
+        />
+      )}
+      {formSuccess && (
+        <ApiMessageBanner
+          type="success"
+          message={formSuccess}
+          onClose={() => setFormSuccess(null)}
+          autoDismissMs={3000}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container py-12">
         <div className="max-w-4xl mx-auto">
-          {formError && (
-            <div className="mb-4 p-3 rounded bg-red-100 text-red-700 border border-red-300 text-center">
-              {formError}
-            </div>
-          )}
-          {formSuccess && (
-            <div className="mb-4 p-3 rounded bg-green-100 text-green-700 border border-green-300 text-center">
-              {formSuccess}
-            </div>
-          )}
+          {Banners}
           {/* Header */}
           <div className="text-center space-y-4 mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium">

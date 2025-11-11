@@ -1,24 +1,30 @@
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Upload, 
-  FileText, 
-  GraduationCap, 
-  Brain, 
-  CheckCircle, 
-  AlertCircle,
+// Eliminado Alert/AlertDescription legacy: ya usamos ApiMessageBanner
+import { ApiMessageBanner } from "@/components/ApiMessageBanner";
+import {
+  Upload,
+  FileText,
+  GraduationCap,
+  Brain,
+  CheckCircle,
   Download,
   Eye,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 const GeneratePEI = () => {
@@ -29,6 +35,15 @@ const GeneratePEI = () => {
   const [progress, setProgress] = useState(0);
   const [peiGenerated, setPeiGenerated] = useState(false);
   const [error, setError] = useState<string>("");
+  const [statusMessage, setStatusMessage] = useState<string>("");
+  const liveRegionRef = useRef<HTMLDivElement | null>(null);
+
+  // Enfocar el banner cuando aparece un error para accesibilidad
+  useEffect(() => {
+    if (error && liveRegionRef.current) {
+      liveRegionRef.current.focus();
+    }
+  }, [error]);
 
   const grades = [
     { value: "infantil-3", label: "Educación Infantil 3 años" },
@@ -49,7 +64,7 @@ const GeneratePEI = () => {
     { value: "fp-basica", label: "FP Básica" },
     { value: "fp-grado-medio", label: "FP Grado Medio" },
     { value: "fp-grado-superior", label: "FP Grado Superior" },
-    { value: "universidad", label: "Universidad" }
+    { value: "universidad", label: "Universidad" },
   ];
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,27 +72,30 @@ const GeneratePEI = () => {
     if (file) {
       // Validar tipo de archivo
       const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'image/jpeg',
-        'image/png',
-        'image/tiff'
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+        "image/tiff",
       ];
-      
+
       if (!allowedTypes.includes(file.type)) {
-        setError("Tipo de archivo no válido. Solo se permiten PDF, Word, JPEG, PNG o TIFF.");
+        setError(
+          "Tipo de archivo no válido. Solo se permiten PDF, Word, JPEG, PNG o TIFF."
+        );
         return;
       }
-      
+
       // Validar tamaño (máximo 10MB)
       if (file.size > 10 * 1024 * 1024) {
         setError("El archivo es demasiado grande. Máximo 10MB.");
         return;
       }
-      
+
       setSelectedFile(file);
       setError("");
+      setStatusMessage(`Archivo listo: ${file.name}`);
     }
   };
 
@@ -90,6 +108,7 @@ const GeneratePEI = () => {
     setIsProcessing(true);
     setProgress(0);
     setError("");
+    setStatusMessage("Iniciando generación del PEI...");
 
     try {
       // Simular procesamiento con progreso
@@ -99,17 +118,20 @@ const GeneratePEI = () => {
         "Analizando contenido...",
         "Generando perfil neuroacadémico...",
         "Creando itinerario personalizado...",
-        "Generando PEI..."
+        "Generando PEI...",
       ];
 
       for (let i = 0; i < steps.length; i++) {
+        setStatusMessage(steps[i]);
         setProgress((i + 1) * (100 / steps.length));
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
       setPeiGenerated(true);
+      setStatusMessage("PEI generado exitosamente.");
     } catch (err) {
       setError("Error al procesar el archivo. Por favor, inténtalo de nuevo.");
+      setStatusMessage("");
     } finally {
       setIsProcessing(false);
     }
@@ -117,21 +139,21 @@ const GeneratePEI = () => {
 
   const handleDownloadPEI = () => {
     // Simular descarga del PEI
-    const link = document.createElement('a');
-    link.href = '#';
-    link.download = 'PEI_Generado.pdf';
+    const link = document.createElement("a");
+    link.href = "#";
+    link.download = "PEI_Generado.pdf";
     link.click();
   };
 
   const handlePreviewPEI = () => {
     // Simular vista previa del PEI
-    window.open('#', '_blank');
+    window.open("#", "_blank");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-12">
         {/* Header de la página */}
         <div className="text-center mb-12">
@@ -144,7 +166,8 @@ const GeneratePEI = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Sube el informe clínico y selecciona el grado a cursar para generar automáticamente tu Pasaporte Educativo Inteligente
+            Sube el informe clínico y selecciona el grado a cursar para generar
+            automáticamente tu Pasaporte Educativo Inteligente
           </p>
         </div>
 
@@ -156,34 +179,44 @@ const GeneratePEI = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-4">
                     <Upload className="h-6 w-6 text-primary" />
-                    <h2 className="text-2xl font-bold">1. Subir Informe Clínico</h2>
+                    <h2 className="text-2xl font-bold">
+                      1. Subir Informe Clínico
+                    </h2>
                   </div>
-                  
+
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors">
                     <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <div className="space-y-2">
-                      <p className="text-lg font-medium">Arrastra tu archivo aquí o haz clic para seleccionar</p>
+                      <p className="text-lg font-medium">
+                        Arrastra tu archivo aquí o haz clic para seleccionar
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        Formatos soportados: PDF, Word, JPEG, PNG, TIFF (máximo 10MB)
+                        Formatos soportados: PDF, Word, JPEG, PNG, TIFF (máximo
+                        10MB)
                       </p>
                     </div>
-                    
+
                     <Input
                       type="file"
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.tiff"
                       onChange={handleFileChange}
                       className="mt-4"
                     />
-                    
+
                     {selectedFile && (
                       <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                         <div className="flex items-center gap-2 text-green-700">
                           <CheckCircle className="h-5 w-5" />
-                          <span className="font-medium">Archivo seleccionado:</span>
+                          <span className="font-medium">
+                            Archivo seleccionado:
+                          </span>
                         </div>
-                        <p className="text-sm text-green-600 mt-1">{selectedFile.name}</p>
+                        <p className="text-sm text-green-600 mt-1">
+                          {selectedFile.name}
+                        </p>
                         <p className="text-xs text-green-500">
-                          Tamaño: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          Tamaño: {(selectedFile.size / 1024 / 1024).toFixed(2)}{" "}
+                          MB
                         </p>
                       </div>
                     )}
@@ -194,12 +227,17 @@ const GeneratePEI = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-4">
                     <GraduationCap className="h-6 w-6 text-primary" />
-                    <h2 className="text-2xl font-bold">2. Seleccionar Grado a Cursar</h2>
+                    <h2 className="text-2xl font-bold">
+                      2. Seleccionar Grado a Cursar
+                    </h2>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="grade">Grado/Nivel Educativo</Label>
-                    <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                    <Select
+                      value={selectedGrade}
+                      onValueChange={setSelectedGrade}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Selecciona el grado que vas a cursar" />
                       </SelectTrigger>
@@ -218,9 +256,11 @@ const GeneratePEI = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-4">
                     <FileText className="h-6 w-6 text-primary" />
-                    <h2 className="text-2xl font-bold">3. Notas Adicionales (Opcional)</h2>
+                    <h2 className="text-2xl font-bold">
+                      3. Notas Adicionales (Opcional)
+                    </h2>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="notes">Información adicional</Label>
                     <Textarea
@@ -233,15 +273,20 @@ const GeneratePEI = () => {
                   </div>
                 </div>
 
-                {/* Error message */}
-                {error && (
-                  <Alert className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-700">
-                      {error}
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {/* Mensajes accesibles (error / estado de progreso) */}
+                <div
+                  ref={liveRegionRef}
+                  aria-live="polite"
+                  aria-atomic="true"
+                  tabIndex={-1}
+                >
+                  {(error || statusMessage) && (
+                    <ApiMessageBanner
+                      message={error ? error : statusMessage}
+                      type={error ? "error" : peiGenerated ? "success" : "info"}
+                    />
+                  )}
+                </div>
 
                 {/* Botón de generación */}
                 <div className="pt-6">
@@ -284,13 +329,16 @@ const GeneratePEI = () => {
                   <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
                     <CheckCircle className="h-8 w-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-green-600">¡PEI Generado Exitosamente!</h2>
+                  <h2 className="text-3xl font-bold text-green-600">
+                    ¡PEI Generado Exitosamente!
+                  </h2>
                 </div>
-                
+
                 <p className="text-lg text-muted-foreground">
-                  Tu Pasaporte Educativo Inteligente ha sido creado y está listo para descargar.
+                  Tu Pasaporte Educativo Inteligente ha sido creado y está listo
+                  para descargar.
                 </p>
-                
+
                 <div className="grid md:grid-cols-2 gap-4 max-w-md mx-auto">
                   <Button
                     onClick={handleDownloadPEI}
@@ -299,7 +347,7 @@ const GeneratePEI = () => {
                     <Download className="h-5 w-5 mr-2" />
                     Descargar PEI
                   </Button>
-                  
+
                   <Button
                     onClick={handlePreviewPEI}
                     variant="outline"
@@ -309,7 +357,7 @@ const GeneratePEI = () => {
                     Vista Previa
                   </Button>
                 </div>
-                
+
                 <div className="pt-6">
                   <Button
                     onClick={() => {
@@ -319,6 +367,7 @@ const GeneratePEI = () => {
                       setAdditionalNotes("");
                       setProgress(0);
                       setError("");
+                      setStatusMessage("");
                     }}
                     variant="outline"
                     className="text-muted-foreground hover:text-foreground"
@@ -331,7 +380,7 @@ const GeneratePEI = () => {
           )}
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );
