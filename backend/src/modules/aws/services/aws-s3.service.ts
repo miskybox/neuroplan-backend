@@ -48,7 +48,7 @@ export class AwsS3Service {
   /**
    * Get signed URL for temporary download
    */
-  async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+  async getSignedUrl(key: string, _expiresIn: number = 3600): Promise<string> {
     if (this.mockMode) {
       return this.mockGetSignedUrl(key);
     }
@@ -65,7 +65,7 @@ export class AwsS3Service {
   /**
    * Delete file from S3
    */
-  async deleteFile(key: string): Promise<boolean> {
+  async deleteFile(_key: string): Promise<boolean> {
     if (this.mockMode) {
       return true;
     }

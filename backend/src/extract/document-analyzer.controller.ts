@@ -19,7 +19,7 @@ export class DocumentAnalyzerController {
   })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
-  async analyzeDocument(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
+  async analyzeDocument(@UploadedFile() file: Express.Multer.File, @CurrentUser() _user: any) {
     if (!file) {
       throw new BadRequestException('No se ha proporcionado ningún archivo');
     }

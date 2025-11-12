@@ -72,6 +72,7 @@ const PEIEngine = () => {
     checkBackendConnection();
     loadStudents();
     loadPEIs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkBackendConnection = async () => {
@@ -591,7 +592,7 @@ const PEIEngine = () => {
                               </p>
                               <Badge
                                 variant={
-                                  pei.status === "approved"
+                                  pei.status === ("approved" as PEI["status"])
                                     ? "default"
                                     : "secondary"
                                 }
@@ -894,7 +895,8 @@ const PEIEngine = () => {
                     else if (area.nivel === "Medio")
                       bgColorClass = "bg-yellow-500";
 
-                    let badgeVariant: any = "default";
+                    let badgeVariant: "default" | "destructive" | "secondary" =
+                      "default";
                     if (area.nivel === "Alto") badgeVariant = "destructive";
                     else if (area.nivel === "Medio") badgeVariant = "secondary";
 

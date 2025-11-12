@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 export type MockUser = {
   id: string;
   email: string;
-  password: string;
+  passwordHash: string;  // Cambiado de 'password' a 'passwordHash'
   role: string;
   first_name: string;
   last_name: string;
@@ -15,14 +16,20 @@ class MockAuthStoreClass {
   private users: Map<string, MockUser> = new Map();
 
   constructor() {
-    // Pre-seed user for E2E tests
+    // Pre-seed user for E2E tests (con hash)
+    this.initializeSeedUser();
+  }
+
+  private async initializeSeedUser() {
     const seededEmail = 'e2e-test@neuroplan.com';
     const existing = this.findByEmail(seededEmail);
     if (!existing) {
+      // Hash de la contraseña 'E2eTest2024!'
+      const passwordHash = await bcrypt.hash('E2eTest2024!', 10);
       const user: MockUser = {
         id: randomUUID(),
         email: seededEmail,
-        password: 'E2eTest2024!',
+        passwordHash,
         role: 'ORIENTADOR',
         first_name: 'E2E',
         last_name: 'Test User',
@@ -33,17 +40,32 @@ class MockAuthStoreClass {
     }
   }
 
-  create(user: Omit<MockUser, 'id' | 'active'> & { active?: boolean }): MockUser {
+  async create(user: Omit<MockUser, 'id' | 'active' | 'passwordHash'> & { password: string; active?: boolean }): Promise<MockUser> {
     const existing = this.findByEmail(user.email);
     if (existing) return existing;
 
+    // Hash de la contraseña
+    const passwordHash = await bcrypt.hash(user.password, 10);
+
     const newUser: MockUser = {
       id: randomUUID(),
+      email: user.email,
+      passwordHash,
+      role: user.role,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      center_id: user.center_id,
       active: user.active ?? true,
-      ...user,
     };
     this.users.set(newUser.id, newUser);
     return newUser;
+  }
+
+  async validatePassword(email: string, password: string): Promise<boolean> {
+    const user = this.findByEmail(email);
+    if (!user) return false;
+
+    return await bcrypt.compare(password, user.passwordHash);
   }
 
   findByEmail(email: string): MockUser | undefined {

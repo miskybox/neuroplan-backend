@@ -3,7 +3,11 @@ import { ChevronDown, Search, Phone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface Country {
@@ -114,27 +118,28 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   label,
   disabled = false,
   className,
-  error
+  error,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // España por defecto
   const [phoneNumber, setPhoneNumber] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [inputError, setInputError] = useState("");
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filtrar países basado en la búsqueda
-  const filteredCountries = countries.filter(country =>
-    country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    country.dialCode.includes(searchQuery) ||
-    country.code.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCountries = countries.filter(
+    (country) =>
+      country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      country.dialCode.includes(searchQuery) ||
+      country.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Parsear el valor inicial si viene con código de país
   useEffect(() => {
     if (value) {
-      const country = countries.find(c => value.startsWith(c.dialCode));
+      const country = countries.find((c) => value.startsWith(c.dialCode));
       if (country) {
         setSelectedCountry(country);
         setPhoneNumber(value.substring(country.dialCode.length));
@@ -147,9 +152,9 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   // Manejar cambio en el número de teléfono
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
-    
+
     // Solo permitir números, espacios, guiones y paréntesis
-    const cleanInput = input.replace(/[^\d\s\-\(\)]/g, '');
+    const cleanInput = input.replace(/[^\d\s\-()]/g, "");
     setPhoneNumber(cleanInput);
     setInputError("");
 
@@ -172,7 +177,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     setSelectedCountry(country);
     setSearchQuery("");
     setIsOpen(false);
-    
+
     // Actualizar el valor completo con el nuevo código de país
     const fullPhone = country.dialCode + phoneNumber;
     onChange(fullPhone);
@@ -192,7 +197,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           {label}
         </Label>
       )}
-      
+
       <div className="relative">
         <div className="flex">
           {/* Selector de país */}
@@ -209,12 +214,14 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{selectedCountry.flag}</span>
-                  <span className="text-sm font-medium">{selectedCountry.dialCode}</span>
+                  <span className="text-sm font-medium">
+                    {selectedCountry.dialCode}
+                  </span>
                 </div>
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
-            
+
             <PopoverContent className="w-80 p-0" align="start">
               <div className="p-4">
                 {/* Búsqueda */}
@@ -241,8 +248,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                       <div className="flex items-center gap-3 w-full">
                         <span className="text-lg">{country.flag}</span>
                         <div className="flex-1 text-left">
-                          <div className="font-medium text-sm">{country.name}</div>
-                          <div className="text-xs text-muted-foreground">{country.dialCode}</div>
+                          <div className="font-medium text-sm">
+                            {country.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {country.dialCode}
+                          </div>
                         </div>
                         {selectedCountry.code === country.code && (
                           <div className="w-2 h-2 rounded-full bg-primary" />
@@ -250,7 +261,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                       </div>
                     </Button>
                   ))}
-                  
+
                   {filteredCountries.length === 0 && (
                     <div className="p-4 text-center text-muted-foreground text-sm">
                       No se encontraron países
@@ -276,7 +287,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                 error || inputError ? "border-destructive" : ""
               )}
             />
-            
+
             {phoneNumber && (
               <Button
                 type="button"
@@ -294,9 +305,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
 
       {/* Mensaje de error */}
       {(error || inputError) && (
-        <p className="text-sm text-destructive">
-          {error || inputError}
-        </p>
+        <p className="text-sm text-destructive">{error || inputError}</p>
       )}
 
       {/* Información adicional */}

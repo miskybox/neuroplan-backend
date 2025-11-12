@@ -12,9 +12,11 @@ export const useVoice = () => {
   const getSpeechSynthesis = (): SpeechSynthesis | undefined => {
     if (
       typeof globalThis !== "undefined" &&
-      (globalThis as any).speechSynthesis
+      (globalThis as unknown as { speechSynthesis?: SpeechSynthesis })
+        .speechSynthesis
     ) {
-      return (globalThis as any).speechSynthesis as SpeechSynthesis;
+      return (globalThis as unknown as { speechSynthesis: SpeechSynthesis })
+        .speechSynthesis;
     }
     return undefined;
   };
@@ -23,8 +25,10 @@ export const useVoice = () => {
   useEffect(() => {
     const supported =
       typeof globalThis !== "undefined" &&
-      !!(globalThis as any).speechSynthesis &&
-      typeof (globalThis as any).SpeechSynthesisUtterance === "function";
+      !!(globalThis as unknown as { speechSynthesis?: SpeechSynthesis })
+        .speechSynthesis &&
+      typeof (globalThis as unknown as { SpeechSynthesisUtterance?: unknown })
+        .SpeechSynthesisUtterance === "function";
 
     setIsSupported(supported);
     if (!supported) {
@@ -60,8 +64,8 @@ export const useVoice = () => {
         setIsSpeaking(false);
       };
 
-      utterance.onerror = (event: any) => {
-        logger.error("Speech synthesis error:", event?.error || event);
+      utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
+        logger.error("Speech synthesis error:", event.error);
         setIsSpeaking(false);
       };
 

@@ -1,6 +1,9 @@
 declare function describe(name: string, fn: () => void): void;
 declare function it(name: string, fn: () => void): void;
-declare function expect(actual: unknown): any;
+declare function expect(actual: unknown): {
+  toContain(value: string): void;
+  not: { toContain(value: string): void };
+};
 
 import { cn } from "./utils";
 

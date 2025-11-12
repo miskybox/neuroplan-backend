@@ -4,6 +4,7 @@ import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import { testSupabaseConnection } from "./db";
 import { validateRequiredEnvVars } from "./config/validate-env";
 
@@ -43,20 +44,24 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule);
 
-  // 2) Prefijo /api
+  // 2) Middleware para parsear cookies
+  app.use(cookieParser());
+
+  // 3) Prefijo /api
   app.setGlobalPrefix("api");
 
-  // 3) Seguridad
+  // 4) Seguridad
   app.use(helmet());
 
-  // 4) CORS desde env o por defecto a 5173 y 5174
+  // 5) CORS con credentials habilitado para cookies
   const origins = process.env.ALLOWED_ORIGINS?.split(",")
     .map((s) => s.trim())
     .filter(Boolean) || ["http://localhost:5173", "http://localhost:5174"];
   app.enableCors({
     origin: origins,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: false,
+    credentials: true,  // ✅ Habilitar cookies
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // 5) Validación
@@ -107,7 +112,6 @@ async function bootstrap(): Promise<void> {
 }
 
 // Bootstrap con IIFE: NestJS usa CommonJS que no soporta top-level await
-// eslint-disable-next-line sonarjs/no-async-iife
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 void (async () => {
   try {

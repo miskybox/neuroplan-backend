@@ -3,7 +3,7 @@
  */
 
 const { createClient } = require("@supabase/supabase-js");
-const path = require("path");
+const path = require("node:path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -51,13 +51,13 @@ async function checkUsersRoles() {
 
   console.log(`✅ Encontrados ${users.length} usuarios de test:\n`);
 
-  users.forEach((user) => {
+  for (const user of users) {
     console.log(`📧 ${user.email}`);
     console.log(`   ID: ${user.id}`);
     console.log(`   Rol: ${user.role || "❌ NULL"}`);
     console.log(`   Nombre: ${user.first_name} ${user.last_name}`);
     console.log("");
-  });
+  }
 
   // Detectar problemas
   const usersWithoutRole = users.filter((u) => !u.role);
@@ -72,7 +72,11 @@ async function checkUsersRoles() {
   }
 }
 
-checkUsersRoles().catch((error) => {
-  console.error("❌ Error fatal:", error);
-  process.exit(1);
-});
+(async () => {
+  try {
+    await checkUsersRoles();
+  } catch (error) {
+    console.error("❌ Error fatal:", error);
+    process.exit(1);
+  }
+})();

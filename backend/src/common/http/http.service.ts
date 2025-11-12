@@ -16,9 +16,10 @@ export class HttpService {
     });
 
     // Configurar retry automático con exponential backoff
+    const exponentialDelay = axiosRetry.exponentialDelay;
     axiosRetry(this.axiosInstance, {
       retries: 3,
-      retryDelay: axiosRetry.exponentialDelay,
+      retryDelay: exponentialDelay,
       retryCondition: (error) => {
         // Retry en errores de red o 5xx, pero no en 4xx (errores del cliente)
         return (

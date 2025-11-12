@@ -19,7 +19,7 @@ export class AwsBedrockService {
    * Invoke Claude via Amazon Bedrock
    * AWS way to use LLMs (mejor que direct Anthropic API)
    */
-  async invokeClaudeViaBedrock(prompt: string, options?: {
+  async invokeClaudeViaBedrock(prompt: string, _options?: {
     maxTokens?: number;
     temperature?: number;
   }): Promise<{

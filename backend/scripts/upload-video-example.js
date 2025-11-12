@@ -10,7 +10,7 @@
 
 const ApiVideoClient = require("@api.video/nodejs-client").default;
 const fs = require("node:fs");
-const path = require("path");
+const path = require("node:path");
 
 // Configuración desde .env
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
@@ -83,14 +83,16 @@ async function listVideos() {
       return;
     }
 
-    videos.data.forEach((video, index) => {
+    let index = 0;
+    for (const video of videos.data) {
       console.log(`${index + 1}. ${video.title || "Sin título"}`);
       console.log(`   ID: ${video.videoId}`);
       console.log(`   Tags: ${video.tags?.join(", ") || "Sin tags"}`);
       console.log(`   Duración: ${video.duration}s`);
       console.log(`   Vistas: ${video.stats?.views || 0}`);
       console.log("");
-    });
+      index++;
+    }
   } catch (error) {
     console.error("❌ Error listando videos:", error.message);
   }
@@ -152,7 +154,9 @@ const args = process.argv.slice(2);
 const command = args[0];
 
 if (command === "list") {
-  listVideos();
+  (async () => {
+    await listVideos();
+  })();
 } else if (command === "upload" && args[1]) {
   const filePath = args[1];
   const materia = args[2] || "matematicas"; // default

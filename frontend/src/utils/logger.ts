@@ -19,7 +19,7 @@ export const logger = {
    * Debug: Solo en desarrollo
    * Usar para información muy detallada durante desarrollo
    */
-  debug: (...args: any[]): void => {
+  debug: (...args: unknown[]): void => {
     if (isDevelopment) {
       console.log("[DEBUG]", ...args);
     }
@@ -29,7 +29,7 @@ export const logger = {
    * Info: Solo en desarrollo
    * Usar para información general del flujo de la aplicación
    */
-  info: (...args: any[]): void => {
+  info: (...args: unknown[]): void => {
     if (isDevelopment) {
       console.log("[INFO]", ...args);
     }
@@ -39,7 +39,7 @@ export const logger = {
    * Warn: Siempre visible
    * Usar para advertencias que deben ser visibles incluso en producción
    */
-  warn: (...args: any[]): void => {
+  warn: (...args: unknown[]): void => {
     console.warn("[WARN]", ...args);
   },
 
@@ -47,7 +47,7 @@ export const logger = {
    * Error: Siempre visible
    * Usar para errores que deben ser visibles incluso en producción
    */
-  error: (...args: any[]): void => {
+  error: (...args: unknown[]): void => {
     console.error("[ERROR]", ...args);
   },
 };

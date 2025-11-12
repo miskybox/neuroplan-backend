@@ -77,6 +77,87 @@ const testUsers = [
   },
 ];
 
+async function createOrUpdateUser(userData) {
+  const { data: authData, error: authError } =
+    await supabase.auth.admin.createUser({
+      email: userData.email,
+      password: userData.password,
+      email_confirm: true,
+      user_metadata: {
+        role: userData.role,
+        ...userData.metadata,
+      },
+    });
+
+  if (authError && authError.message.includes("already registered")) {
+    return await updateExistingUser(userData);
+  }
+
+  if (authError) {
+    throw authError;
+  }
+
+  console.log(`   ✅ Creado: ${userData.email}`);
+  console.log(`   🆔 ID: ${authData.user.id}`);
+  return {
+    email: userData.email,
+    status: "created",
+    id: authData.user.id,
+  };
+}
+
+async function updateExistingUser(userData) {
+  console.log(`   ⚠️  Usuario ya existe, intentando actualizar...`);
+
+  const { data: existingUsers } = await supabase.auth.admin.listUsers();
+  const existingUser = existingUsers?.users?.find(
+    (u) => u.email === userData.email
+  );
+
+  if (existingUser) {
+    await supabase.auth.admin.updateUserById(existingUser.id, {
+      user_metadata: {
+        role: userData.role,
+        ...userData.metadata,
+      },
+    });
+    console.log(`   ✅ Actualizado: ${userData.email}`);
+    return {
+      email: userData.email,
+      status: "updated",
+      id: existingUser.id,
+    };
+  }
+}
+
+function getStatusIcon(status) {
+  const icons = {
+    created: "✅",
+    updated: "🔄",
+    error: "❌",
+  };
+  return icons[status] || "❓";
+}
+
+function printResults(results) {
+  console.log("\n📊 Resumen:");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  for (const r of results) {
+    const icon = getStatusIcon(r.status);
+    console.log(`${icon} ${r.email.padEnd(25)} - ${r.status}`);
+  }
+}
+
+function printCredentials() {
+  console.log("\n📋 Credenciales de acceso:");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("Email               | Contraseña    | Rol");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  for (const u of testUsers) {
+    console.log(`${u.email.padEnd(20)}| Test123456!   | ${u.role}`);
+  }
+}
+
 async function createTestUsers() {
   console.log("🔧 Creando usuarios de prueba en Supabase...\n");
 
@@ -85,56 +166,8 @@ async function createTestUsers() {
   for (const userData of testUsers) {
     try {
       console.log(`📝 Creando: ${userData.email} (${userData.role})`);
-
-      // Crear usuario con Supabase Auth
-      const { data: authData, error: authError } =
-        await supabase.auth.admin.createUser({
-          email: userData.email,
-          password: userData.password,
-          email_confirm: true,
-          user_metadata: {
-            role: userData.role,
-            ...userData.metadata,
-          },
-        });
-
-      if (authError) {
-        if (authError.message.includes("already registered")) {
-          console.log(`   ⚠️  Usuario ya existe, intentando actualizar...`);
-
-          // Buscar usuario existente
-          const { data: existingUsers } = await supabase.auth.admin.listUsers();
-          const existingUser = existingUsers?.users?.find(
-            (u) => u.email === userData.email
-          );
-
-          if (existingUser) {
-            // Actualizar metadata
-            await supabase.auth.admin.updateUserById(existingUser.id, {
-              user_metadata: {
-                role: userData.role,
-                ...userData.metadata,
-              },
-            });
-            console.log(`   ✅ Actualizado: ${userData.email}`);
-            results.push({
-              email: userData.email,
-              status: "updated",
-              id: existingUser.id,
-            });
-          }
-        } else {
-          throw authError;
-        }
-      } else {
-        console.log(`   ✅ Creado: ${userData.email}`);
-        console.log(`   🆔 ID: ${authData.user.id}`);
-        results.push({
-          email: userData.email,
-          status: "created",
-          id: authData.user.id,
-        });
-      }
+      const result = await createOrUpdateUser(userData);
+      results.push(result);
     } catch (error) {
       console.error(`   ❌ Error con ${userData.email}:`, error.message);
       results.push({
@@ -145,27 +178,8 @@ async function createTestUsers() {
     }
   }
 
-  console.log("\n📊 Resumen:");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  for (const r of results) {
-    let icon;
-    if (r.status === "created") {
-      icon = "✅";
-    } else if (r.status === "updated") {
-      icon = "🔄";
-    } else {
-      icon = "❌";
-    }
-    console.log(`${icon} ${r.email.padEnd(25)} - ${r.status}`);
-  }
-
-  console.log("\n📋 Credenciales de acceso:");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("Email               | Contraseña    | Rol");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  for (const u of testUsers) {
-    console.log(`${u.email.padEnd(20)}| Test123456!   | ${u.role}`);
-  }
+  printResults(results);
+  printCredentials();
 
   console.log("\n🧪 Siguiente paso:");
   console.log("   node scripts/test-endpoints-roles.js");

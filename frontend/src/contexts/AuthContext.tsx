@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
   useMemo,
+  useCallback,
 } from "react";
 import { authService } from "../services/neuroplanApi";
 import type { AuthUser } from "../services/neuroplanApi";
@@ -58,18 +59,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Verificar si hay un token válido en localStorage
+        // Con cookies httpOnly, solo verificamos si hay un usuario guardado localmente
+        // El backend validará la cookie automáticamente en las peticiones
         const savedUser = localStorage.getItem("neuroplan_user");
-        const authToken = localStorage.getItem("authToken");
 
-        if (savedUser && authToken) {
+        if (savedUser) {
           const userData = JSON.parse(savedUser);
           setUser(userData);
         }
       } catch (error) {
         logger.error("Error checking auth:", error);
         localStorage.removeItem("neuroplan_user");
-        localStorage.removeItem("authToken");
       } finally {
         setIsLoading(false);
       }
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
 
     // Timeout de seguridad corto (fallback rápido en dev)
@@ -111,12 +111,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const response = await authService.login(email, password);
         // authService.login ya hace .then(res => res.data), así que response es el objeto directo
-        const token = response.accessToken || response.token;
-        if (token && response.user) {
-          const mapped = mapAuthUserToUser(response.user);
-          localStorage.setItem("authToken", token);
+        // Con cookies httpOnly, el backend NO envía tokens en el body, solo el usuario
+        const userData = response.user || response.data?.user;
+        if (userData) {
+          const mapped = mapAuthUserToUser(userData);
           setUser(mapped);
           localStorage.setItem("neuroplan_user", JSON.stringify(mapped));
+          // Ya no guardamos token en localStorage porque se maneja con cookies httpOnly
           clearTimeout(safetyTimeout);
           return true;
         }
@@ -159,22 +160,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearTimeout(safetyTimeout);
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     authService.logout();
     setUser(null);
     localStorage.removeItem("neuroplan_user");
-    localStorage.removeItem("authToken");
-  };
+    // No es necesario limpiar authToken porque ya no lo usamos (cookies httpOnly)
+  }, []);
 
-  const updateUser = (userData: Partial<User>) => {
+  const updateUser = useCallback((userData: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       localStorage.setItem("neuroplan_user", JSON.stringify(updatedUser));
     }
-  };
+  }, [user]);
 
   const value: AuthContextType = useMemo(
     () => ({
@@ -185,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       updateUser,
     }),
-    [user, isLoading]
+    [user, isLoading, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

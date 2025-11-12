@@ -230,12 +230,13 @@ async function createTestUsers() {
 }
 
 // Ejecutar
-createTestUsers()
-  .then(() => {
+(async () => {
+  try {
+    await createTestUsers();
     console.log("\n✅ Proceso completado");
     process.exit(0);
-  })
-  .catch((error) => {
+  } catch (error) {
     console.error("\n❌ Error fatal:", error);
     process.exit(1);
-  });
+  }
+})();

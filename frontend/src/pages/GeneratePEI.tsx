@@ -130,6 +130,7 @@ const GeneratePEI = () => {
       setPeiGenerated(true);
       setStatusMessage("PEI generado exitosamente.");
     } catch (err) {
+      console.error("Error durante la generación del PEI:", err);
       setError("Error al procesar el archivo. Por favor, inténtalo de nuevo.");
       setStatusMessage("");
     } finally {
@@ -172,7 +173,7 @@ const GeneratePEI = () => {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          {!peiGenerated ? (
+          {peiGenerated === false ? (
             <Card className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
               <div className="space-y-8">
                 {/* Sección de subida de archivo */}
@@ -280,12 +281,23 @@ const GeneratePEI = () => {
                   aria-atomic="true"
                   tabIndex={-1}
                 >
-                  {(error || statusMessage) && (
-                    <ApiMessageBanner
-                      message={error ? error : statusMessage}
-                      type={error ? "error" : peiGenerated ? "success" : "info"}
-                    />
-                  )}
+                  {(error || statusMessage) &&
+                    (() => {
+                      let bannerType: "error" | "success" | "info";
+                      if (error) {
+                        bannerType = "error";
+                      } else if (peiGenerated) {
+                        bannerType = "success";
+                      } else {
+                        bannerType = "info";
+                      }
+                      return (
+                        <ApiMessageBanner
+                          message={error || statusMessage}
+                          type={bannerType}
+                        />
+                      );
+                    })()}
                 </div>
 
                 {/* Botón de generación */}

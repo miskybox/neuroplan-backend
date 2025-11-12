@@ -53,7 +53,7 @@ export class DashboardService {
     }
   }
 
-  async getRecentActivity(userId: string, userRole: string) {
+  async getRecentActivity(userId: string, _userRole: string) {
     try {
       // Obtener actividad reciente usando Supabase (con relaciones)
       const { data, error } = await supabase

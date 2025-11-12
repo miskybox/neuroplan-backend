@@ -27,8 +27,8 @@ export class RegisterDto {
 
   @IsOptional() // Opcional para desarrollo
   @IsString({ message: "El rol debe ser un texto" })
-  @IsIn(["ADMIN", "ORIENTADOR", "PROFESOR", "DIRECTOR_CENTRO"], {
-    message: "El rol debe ser: ADMIN, ORIENTADOR, PROFESOR o DIRECTOR_CENTRO",
+  @IsIn(["DIRECTOR_CENTRO", "PROFESOR", "TUTOR", "ORIENTADOR", "ALUMNO", "PADRE_TUTOR"], {
+    message: "El rol debe ser: DIRECTOR_CENTRO, PROFESOR, TUTOR, ORIENTADOR, ALUMNO o PADRE_TUTOR",
   })
   role?: string; // Opcional, default PROFESOR
 

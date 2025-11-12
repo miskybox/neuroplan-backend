@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '../../../common/http/http.service';
-import { AxiosError } from 'axios';
 
 /**
  * Interfaces para tipado de respuestas N8N

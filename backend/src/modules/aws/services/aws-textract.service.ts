@@ -12,7 +12,7 @@ export class AwsTextractService {
    * Extract text from document using AWS Textract
    * Supports PDF, PNG, JPEG, TIFF
    */
-  async extractText(fileBuffer: Buffer): Promise<{
+  async extractText(_fileBuffer: Buffer): Promise<{
     text: string;
     confidence: number;
     blocks: number;
@@ -38,7 +38,7 @@ export class AwsTextractService {
   /**
    * Advanced document analysis with forms and tables
    */
-  async analyzeDocument(fileBuffer: Buffer): Promise<{
+  async analyzeDocument(_fileBuffer: Buffer): Promise<{
     text: string;
     forms: any[];
     tables: any[];

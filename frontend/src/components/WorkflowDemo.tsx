@@ -22,8 +22,17 @@ import {
   Send,
 } from "lucide-react";
 import { workflowService, healthService } from "../services/neuroplanApi";
+import type { WorkflowExecution } from "../types/api";
 import { toast } from "sonner";
 import { logger } from "@/utils/logger";
+
+interface WorkflowStats {
+  totalWorkflows?: number;
+  executedWorkflows?: number;
+  successfulExecutions?: number;
+  failedExecutions?: number;
+  [key: string]: unknown;
+}
 
 export default function WorkflowDemo() {
   const [isBackendConnected, setIsBackendConnected] = useState(false);
@@ -33,18 +42,23 @@ export default function WorkflowDemo() {
   const [workflowName, setWorkflowName] = useState("");
   const [workflowData, setWorkflowData] = useState("{}");
   const [isTriggeringWorkflow, setIsTriggeringWorkflow] = useState(false);
-  const [workflowResult, setWorkflowResult] = useState<any>(null);
+  const [workflowResult, setWorkflowResult] =
+    useState<WorkflowExecution | null>(null);
 
   // Estado para Notificaciones PEI
   const [peiIdGenerated, setPeiIdGenerated] = useState("1");
   const [peiIdApproved, setPeiIdApproved] = useState("1");
   const [isNotifyingGenerated, setIsNotifyingGenerated] = useState(false);
   const [isNotifyingApproved, setIsNotifyingApproved] = useState(false);
-  const [generatedResult, setGeneratedResult] = useState<any>(null);
-  const [approvedResult, setApprovedResult] = useState<any>(null);
+  const [generatedResult, setGeneratedResult] = useState<
+    WorkflowExecution | Record<string, unknown> | null
+  >(null);
+  const [approvedResult, setApprovedResult] = useState<
+    WorkflowExecution | Record<string, unknown> | null
+  >(null);
 
   // Estado para Estadísticas
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<WorkflowStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   useEffect(() => {
@@ -59,7 +73,7 @@ export default function WorkflowDemo() {
       if (response.status === 200) {
         toast.success("Conectado al backend correctamente");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsBackendConnected(false);
       toast.error("No se pudo conectar con el backend");
       logger.error("Backend connection error:", error);
@@ -77,7 +91,7 @@ export default function WorkflowDemo() {
     let parsedData;
     try {
       parsedData = JSON.parse(workflowData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error("El JSON de datos no es válido");
       logger.error("JSON parse error:", error);
       return;
@@ -98,8 +112,10 @@ export default function WorkflowDemo() {
       } else {
         toast.error("Error al disparar el workflow");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Error al disparar el workflow");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      toast.error(errorMessage || "Error al disparar el workflow");
       logger.error("Error:", error);
     } finally {
       setIsTriggeringWorkflow(false);
@@ -127,8 +143,10 @@ export default function WorkflowDemo() {
       } else {
         toast.error("Error al enviar notificación");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Error al enviar notificación");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      toast.error(errorMessage || "Error al enviar notificación");
       logger.error("Error:", error);
     } finally {
       setIsNotifyingGenerated(false);
@@ -156,8 +174,10 @@ export default function WorkflowDemo() {
       } else {
         toast.error("Error al enviar notificación");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Error al enviar notificación");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      toast.error(errorMessage || "Error al enviar notificación");
       logger.error("Error:", error);
     } finally {
       setIsNotifyingApproved(false);
@@ -179,10 +199,10 @@ export default function WorkflowDemo() {
       } else {
         toast.error(`Error al cargar estadísticas (${response.status})`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error("Error completo:", error);
       const errorMessage =
-        error.response?.data?.message || error.message || "Error de conexión";
+        error instanceof Error ? error.message : "Error de conexión";
       toast.error(`Error: ${errorMessage}`);
 
       // Mostrar datos de prueba en caso de error
@@ -199,7 +219,9 @@ export default function WorkflowDemo() {
     }
   };
 
-  const renderResult = (result: any) => {
+  const renderResult = (
+    result: WorkflowExecution | Record<string, unknown> | null
+  ) => {
     if (!result) return null;
 
     return (

@@ -152,7 +152,7 @@ export class StudentsController {
     if (!data) throw new NotFoundException("Estudiante no encontrado");
 
     // Transformar datos para compatibilidad con mapper centralizado
-    const student = mapStudent(data as any);
+    const student = mapStudent(data);
 
     return ResponseHelper.success(student);
   }
@@ -224,14 +224,14 @@ export class StudentsController {
 
       // Transformar respuesta para compatibilidad con mapper centralizado
       const studentResponse = mapStudent({
-        ...(data as any),
+        ...(data),
         // fallback si no viniera persons del insert
         persons: data?.persons ?? {
-          id: (data as any)?.person_id,
+          id: (data)?.person_id,
           first_name: studentDto.first_name,
           last_name: studentDto.last_name,
         },
-      } as any);
+      });
 
       return ResponseHelper.created(
         studentResponse,

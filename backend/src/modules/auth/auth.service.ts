@@ -15,8 +15,72 @@ import { MockAuthStore } from "./mock-auth.store";
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private refreshTokens: Map<string, { userId: string; expiresAt: number }> = new Map();
 
   constructor(private readonly jwtService: JwtService) {}
+
+  // Generar access token (corta duración: 15 minutos)
+  private generateAccessToken(payload: JwtPayload): string {
+    return this.jwtService.sign(payload, {
+      expiresIn: '15m',
+    });
+  }
+
+  // Generar refresh token (larga duración: 7 días)
+  private generateRefreshToken(userId: string): string {
+    const refreshToken = this.jwtService.sign(
+      { sub: userId, type: 'refresh' },
+      { expiresIn: '7d' }
+    );
+
+    // Guardar en memoria (en producción usar Redis o BD)
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 días
+    this.refreshTokens.set(refreshToken, { userId, expiresAt });
+
+    return refreshToken;
+  }
+
+  // Generar ambos tokens
+  private generateTokenPair(user: any): { accessToken: string; refreshToken: string } {
+    const payload = this.createPayload(user);
+    const accessToken = this.generateAccessToken(payload);
+    const refreshToken = this.generateRefreshToken(user.id);
+
+    return { accessToken, refreshToken };
+  }
+
+  // Validar refresh token
+  async validateRefreshToken(refreshToken: string): Promise<string | null> {
+    try {
+      // Verificar que el token existe en nuestro store
+      const tokenData = this.refreshTokens.get(refreshToken);
+      if (!tokenData) {
+        return null;
+      }
+
+      // Verificar que no haya expirado
+      if (Date.now() > tokenData.expiresAt) {
+        this.refreshTokens.delete(refreshToken);
+        return null;
+      }
+
+      // Verificar la firma del token
+      const decoded = this.jwtService.verify(refreshToken);
+      if (decoded.type !== 'refresh') {
+        return null;
+      }
+
+      return tokenData.userId;
+    } catch (error) {
+      this.logger.error('Error validating refresh token', error);
+      return null;
+    }
+  }
+
+  // Revocar refresh token (logout)
+  revokeRefreshToken(refreshToken: string): void {
+    this.refreshTokens.delete(refreshToken);
+  }
 
   async register(dto: RegisterDto) {
     try {
@@ -51,10 +115,12 @@ export class AuthService {
         authMock
       );
 
-      const accessToken = this.jwtService.sign(this.createPayload(dbUser));
+      // Generar access token y refresh token
+      const { accessToken, refreshToken } = this.generateTokenPair(dbUser);
 
       return {
         accessToken,
+        refreshToken,
         user: this.mapUserResponse(dbUser),
         authUser: authMock ? { id: dbUser.id, email: dbUser.email } : undefined,
       };
@@ -75,7 +141,7 @@ export class AuthService {
   }
 
   private normalizeRole(role: string = "PROFESOR"): string {
-    const validRoles = ["ADMIN", "ORIENTADOR", "PROFESOR", "DIRECTOR_CENTRO"];
+    const validRoles = ["DIRECTOR_CENTRO", "PROFESOR", "TUTOR", "ORIENTADOR", "ALUMNO", "PADRE_TUTOR"];
     return validRoles.includes(role) ? role : "PROFESOR";
   }
 
@@ -95,7 +161,7 @@ export class AuthService {
     authMock: boolean
   ): Promise<string> {
     if (authMock) {
-      const mockUser = MockAuthStore.create({
+      const mockUser = await MockAuthStore.create({
         email: dto.email,
         password: dto.password,
         role,
@@ -200,13 +266,15 @@ export class AuthService {
     );
     try {
       const dbUser = authMock
-        ? this.loginWithMock(dto)
+        ? await this.loginWithMock(dto)
         : await this.loginWithSupabase(dto);
 
-      const accessToken = this.jwtService.sign(this.createPayload(dbUser));
+      // Generar access token y refresh token
+      const { accessToken, refreshToken } = this.generateTokenPair(dbUser);
 
       return {
         accessToken,
+        refreshToken,
         user: this.mapUserResponse(dbUser),
         authUser: authMock ? { id: dbUser.id, email: dbUser.email } : undefined,
       };
@@ -215,11 +283,18 @@ export class AuthService {
     }
   }
 
-  private loginWithMock(dto: LoginDto) {
+  private async loginWithMock(dto: LoginDto) {
     const user = MockAuthStore.findByEmail(dto.email);
-    if (!user || user.password !== dto.password) {
+    if (!user) {
       throw new UnauthorizedException("Credenciales inválidas");
     }
+
+    // Validar contraseña usando bcrypt
+    const isPasswordValid = await MockAuthStore.validatePassword(dto.email, dto.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException("Credenciales inválidas");
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -302,15 +377,58 @@ export class AuthService {
     }
   }
 
-  // Método para cerrar sesión
-  async logout() {
+  // Método para refrescar el access token usando el refresh token
+  async refresh(refreshToken: string) {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        const errorStack = error instanceof Error ? error.stack : String(error);
-        this.logger.error("Error cerrando sesión", errorStack);
-        throw new BadRequestException("Error al cerrar sesión");
+      const userId = await this.validateRefreshToken(refreshToken);
+
+      if (!userId) {
+        throw new UnauthorizedException('Refresh token inválido o expirado');
       }
+
+      // Obtener el usuario actualizado
+      const user = await getUserById(userId);
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
+
+      // Generar nuevo access token
+      const payload = this.createPayload(user);
+      const newAccessToken = this.generateAccessToken(payload);
+
+      return {
+        accessToken: newAccessToken,
+        user: this.mapUserResponse(user),
+      };
+    } catch (error) {
+      const errorStack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Error refreshing token', errorStack);
+
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Error al refrescar el token');
+    }
+  }
+
+  // Método para cerrar sesión
+  async logout(refreshToken?: string) {
+    try {
+      // Revocar refresh token si se proporciona
+      if (refreshToken) {
+        this.revokeRefreshToken(refreshToken);
+      }
+
+      // Cerrar sesión en Supabase (solo si no es mock)
+      if (!this.isAuthMock()) {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          const errorStack = error instanceof Error ? error.stack : String(error);
+          this.logger.error("Error cerrando sesión en Supabase", errorStack);
+          // No lanzar error, el refresh token ya fue revocado
+        }
+      }
+
       return { message: "Sesión cerrada correctamente" };
     } catch (error) {
       const errorStack = error instanceof Error ? error.stack : String(error);

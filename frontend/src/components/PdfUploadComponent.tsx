@@ -103,13 +103,12 @@ export function PdfUploadComponent() {
       logger.info("📥 Respuesta recibida:", result);
 
       if (result.success && result.data && "analysis" in result.data) {
-        const payload = (result.data as ApiAnalyzeResponse).analysis;
+        const payload = result.data.analysis;
         setAnalysisResult(payload);
         logger.info("✅ Análisis completado exitosamente");
       } else {
         const errorMsg =
-          (result.data as ApiAnalyzeResponse)?.message ||
-          "Respuesta inesperada del servidor";
+          result.data?.message || "Respuesta inesperada del servidor";
         logger.error("Respuesta inesperada:", result.data);
         throw new Error(errorMsg);
       }

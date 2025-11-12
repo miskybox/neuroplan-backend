@@ -1,6 +1,6 @@
 const PDFDocument = require("pdfkit");
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const pdfPath = path.join(__dirname, "test.pdf");
 
@@ -61,7 +61,7 @@ stream.on("finish", async () => {
 
   // Verificar con pdf-parse
   try {
-    const pdfParse = require("./backend/node_modules/pdf-parse");
+    const pdfParse = require("pdf-parse");
     const buffer = fs.readFileSync(pdfPath);
     const data = await pdfParse(buffer);
     console.log("✅ Texto extraíble:", data.text.length, "caracteres");

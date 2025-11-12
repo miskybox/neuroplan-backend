@@ -77,7 +77,7 @@ export class PeisController {
       const data =
         Array.isArray(pei) ||
         (pei && typeof pei === "object" && "student_id" in pei)
-          ? mapPei(pei as any)
+          ? mapPei(pei)
           : pei;
       return ResponseHelper.created(data, "PEI generado correctamente");
     } catch (error) {

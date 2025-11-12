@@ -29,15 +29,14 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,  // ✅ Enviar cookies automáticamente
 });
 
-// Interceptor para requests (agregar token si existe)
+// Interceptor para requests - Ya no necesitamos manejar tokens manualmente
+// Las cookies httpOnly se envían automáticamente
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Las cookies se envían automáticamente por withCredentials: true
     return config;
   },
   (error) => {
@@ -76,8 +75,8 @@ function handleNetworkError(url: string): {
   if (isProtectedEndpoint(url)) {
     console.error("❌ Error de autenticación en endpoint protegido:", url);
   } else {
-    console.warn("⚠️ Token inválido o expirado - Redirigiendo a login");
-    localStorage.removeItem("authToken");
+    console.warn("⚠️ Error de red - Redirigiendo a login");
+    // Ya no necesitamos limpiar localStorage, las cookies se limpian automáticamente
     globalThis.location.href = "/login";
   }
   return {
@@ -87,24 +86,88 @@ function handleNetworkError(url: string): {
   };
 }
 
-// Helper: maneja errores de autenticación
-function handleUnauthorizedError(
+// Variable para evitar múltiples refreshes simultáneos
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
+// Helper: maneja errores de autenticación con refresh token
+async function handleUnauthorizedError(
   url: string,
   userMessage: string,
   code: string,
-  status: number
-): void {
+  status: number,
+  originalConfig: any
+): Promise<any> {
   // En endpoints de auth dejamos que la UI maneje el error (no redirigir)
   if (isAuthEndpoint(url)) {
     emitApiMessage({ type: "error", message: userMessage, code, status });
-    return;
+    return Promise.reject(new Error(userMessage));
   }
 
+  // Si es un 401 y no es el endpoint de refresh, intentar renovar el token
+  if (status === 401 && !url.includes('/auth/refresh')) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+
+      try {
+        // Intentar renovar el access token usando el refresh token
+        await api.post('/auth/refresh');
+
+        // Token renovado exitosamente
+        isRefreshing = false;
+        processQueue();
+
+        // Reintentar la petición original
+        return api(originalConfig);
+      } catch (refreshError) {
+        // Refresh token inválido o expirado, redirigir a login
+        isRefreshing = false;
+        processQueue(refreshError);
+
+        emitApiMessage({
+          type: "error",
+          message: "Sesión expirada. Por favor, inicia sesión nuevamente.",
+          code: "SESSION_EXPIRED",
+          status: 401
+        });
+
+        globalThis.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Si ya se está refrescando, encolar esta petición
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject });
+    }).then(() => {
+      // Una vez refrescado el token, reintentar
+      return api(originalConfig);
+    }).catch((err) => {
+      return Promise.reject(err);
+    });
+  }
+
+  // Para otros casos de 401, redirigir a login
   if (!isProtectedEndpoint(url)) {
-    localStorage.removeItem("authToken");
     emitApiMessage({ type: "error", message: userMessage, code, status });
     globalThis.location.href = "/login";
   }
+
+  return Promise.reject(new Error(userMessage));
 }
 
 // Helper: mapea código de estado HTTP a mensaje y código de error
@@ -162,7 +225,7 @@ function mapStatusToError(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const url = error.config?.url || "";
     const status = error.response?.status;
     const backendMessage = error.response?.data?.message;
@@ -185,8 +248,14 @@ api.interceptors.response.use(
       userMessage = result.userMessage;
       code = result.code;
 
+      // Si es un 401, intentar refresh token automáticamente
       if (status === 401) {
-        handleUnauthorizedError(url, userMessage, code, status);
+        try {
+          return await handleUnauthorizedError(url, userMessage, code, status, error.config);
+        } catch (refreshError) {
+          // Si el refresh falla, continuar con el flujo de error normal
+          return Promise.reject(error);
+        }
       }
     }
 

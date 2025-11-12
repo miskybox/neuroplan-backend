@@ -62,7 +62,7 @@ class VideosService {
 
       // Backend devuelve ApiResponse<Video[]>
       if (result.success && result.data) {
-        return result.data.map((v: any) => ({
+        return result.data.map((v: { createdAt: string }) => ({
           ...v,
           createdAt: new Date(v.createdAt),
         }));

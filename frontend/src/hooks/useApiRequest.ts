@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import api from '@/services/api';
-import { AxiosRequestConfig, AxiosError } from 'axios';
+import { useState } from "react";
+import api from "@/services/api";
+import { AxiosRequestConfig, AxiosError } from "axios";
 
 type ExecResponse<T> = { success: boolean; data: T };
 
@@ -15,15 +15,15 @@ export const useApiRequest = (endpoint: string) => {
    * @param config - Configuración adicional de axios (opcional)
    * @returns Respuesta con { success, data }
    */
-  async function execute<T = any>(
-    bodyOrOptions?: any,
+  async function execute<T = unknown>(
+    bodyOrOptions?: unknown,
     config?: AxiosRequestConfig
   ): Promise<ExecResponse<T>> {
     setLoading(true);
     setError(null);
 
     try {
-      const method = config?.method || 'POST';
+      const method = config?.method || "POST";
       let response;
 
       // Determinar si es FormData o JSON
@@ -33,7 +33,7 @@ export const useApiRequest = (endpoint: string) => {
           method,
           data: bodyOrOptions,
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
           ...config,
         });
@@ -50,9 +50,10 @@ export const useApiRequest = (endpoint: string) => {
     } catch (err) {
       const axiosError = err as AxiosError;
       const errorMessage =
-        (axiosError.response?.data as any)?.message ||
+        ((axiosError.response?.data as Record<string, unknown>)
+          ?.message as string) ||
         axiosError.message ||
-        'Error en la petición';
+        "Error en la petición";
 
       setError(errorMessage);
       throw new Error(errorMessage);

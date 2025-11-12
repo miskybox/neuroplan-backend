@@ -20,31 +20,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Video,
+  Video as VideoIcon,
   Play,
   Pause,
   Volume2,
   VolumeX,
   Download,
-  BookOpen,
-  FileText,
-  Image,
   Search,
-  Filter,
-  Clock,
   Star,
   Eye,
   ThumbsUp,
   Share2,
   Bookmark,
   BookmarkCheck,
-  RotateCcw,
   Maximize,
   Minimize,
-  Settings,
 } from "lucide-react";
 import { useVoice } from "@/hooks/use-voice";
-import { veedService } from "@/services/veed";
+import { veedService, type Video } from "@/services/veed";
 import { logger } from "@/utils/logger";
 
 /**
@@ -57,22 +50,22 @@ export const EducationalResources: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("");
-  const [videos, setVideos] = useState<any[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState<any>(null);
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
 
   // Datos mock de recursos educativos
-  const [mockVideos] = useState([
+  const [mockVideos] = useState<Video[]>([
     {
-      id: 1,
+      id: "1",
       title: "Introducción a las Ecuaciones de Segundo Grado",
       description:
         "Aprende los conceptos básicos de las ecuaciones cuadráticas con ejemplos prácticos",
@@ -95,7 +88,7 @@ export const EducationalResources: React.FC = () => {
       instructor: "Prof. Ana Martínez",
     },
     {
-      id: 2,
+      id: "2",
       title: "Historia de España: Siglo XX",
       description:
         "Repaso completo de los acontecimientos más importantes del siglo XX en España",
@@ -117,7 +110,7 @@ export const EducationalResources: React.FC = () => {
       instructor: "Prof. Carlos López",
     },
     {
-      id: 3,
+      id: "3",
       title: "Fotosíntesis: Proceso Vital",
       description:
         "Explicación detallada del proceso de fotosíntesis en las plantas",
@@ -181,6 +174,7 @@ export const EducationalResources: React.FC = () => {
 
   useEffect(() => {
     loadVideos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, selectedSubject, selectedLevel]);
 
   const loadVideos = async () => {
@@ -212,14 +206,10 @@ export const EducationalResources: React.FC = () => {
     }
   };
 
-  const handlePlayVideo = (video: any) => {
+  const handlePlayVideo = (video: Video) => {
     setCurrentVideo(video);
     setIsPlaying(true);
     setDuration(video.duration);
-  };
-
-  const handlePauseVideo = () => {
-    setIsPlaying(false);
   };
 
   const handleTogglePlay = () => {
@@ -421,7 +411,7 @@ export const EducationalResources: React.FC = () => {
               {/* Video Area */}
               <div className="flex-1 bg-black rounded-lg m-4 flex items-center justify-center">
                 <div className="text-center text-white">
-                  <Video className="w-16 h-16 mx-auto mb-4" />
+                  <VideoIcon className="w-16 h-16 mx-auto mb-4" />
                   <p>Reproductor de video</p>
                   <p className="text-sm text-gray-400">
                     En una implementación real, aquí se mostraría el video de
@@ -471,12 +461,23 @@ export const EducationalResources: React.FC = () => {
                         <Volume2 className="w-4 h-4" />
                       )}
                     </Button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={volume}
+                      onChange={(e) =>
+                        handleVolumeChange(Number.parseFloat(e.target.value))
+                      }
+                      className="w-20"
+                    />
                     <div className="flex items-center gap-2">
                       <span className="text-sm">Velocidad:</span>
                       <Select
                         value={playbackRate.toString()}
                         onValueChange={(value) =>
-                          setPlaybackRate(parseFloat(value))
+                          setPlaybackRate(Number.parseFloat(value))
                         }
                       >
                         <SelectTrigger className="w-20">

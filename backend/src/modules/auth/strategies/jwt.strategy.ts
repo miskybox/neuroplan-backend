@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, Logger } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import { Request } from "express";
 import { getUserById } from "../../../db";
 import { MockAuthStore } from "../mock-auth.store";
 
@@ -9,6 +10,7 @@ export interface JwtPayload {
   email: string;
   rol: string;
   centroId: string;
+  type?: string; // Para diferenciar access/refresh tokens
 }
 
 @Injectable()
@@ -32,9 +34,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // Extraer token de cookies O del header Authorization
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (request: Request) => {
+          // Intentar obtener de cookie primero
+          let token = request?.cookies?.['accessToken'];
+
+          // Si no está en cookie, intentar obtener del header
+          if (!token && request?.headers?.authorization) {
+            const authHeader = request.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+              token = authHeader.substring(7);
+            }
+          }
+
+          return token;
+        },
+      ]),
       ignoreExpiration: false,
       secretOrKey: secret,
+      passReqToCallback: false,
     });
   }
 

@@ -59,7 +59,7 @@ export interface PEI {
   id: number;
   studentId: number;
   reportId: number;
-  content: any; // JSON object con la estructura del PEI
+  content: Record<string, unknown>; // JSON object con la estructura del PEI
   status: PEIStatus;
   generatedAt: string;
   lastModified: string;
@@ -100,8 +100,8 @@ export interface WorkflowExecution {
   id: number;
   workflowName: string;
   status: WorkflowStatus;
-  inputData: any;
-  outputData?: any;
+  inputData: Record<string, unknown>;
+  outputData?: Record<string, unknown>;
   executedAt: string;
   completedAt?: string;
   duration?: number;
@@ -114,7 +114,7 @@ export interface ActivityLog {
   action: string;
   entityType?: string;
   entityId?: number;
-  details?: any;
+  details?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -156,7 +156,7 @@ export interface SearchResourcesDTO {
 
 export interface TriggerWorkflowDTO {
   workflowName: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 // Response types
@@ -181,5 +181,5 @@ export interface ApiError {
   statusCode: number;
   timestamp: string;
   path: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }

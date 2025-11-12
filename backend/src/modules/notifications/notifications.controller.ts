@@ -138,8 +138,7 @@ export class NotificationsController {
   ): Promise<ApiResponseType<any>> {
     const updated = await this.notificationsService.markAsRead(id, user.id);
     // El servicio puede devolver la fila; si viene en snake_case, mapear
-    const mapped =
-      updated && updated.user_id ? mapNotification(updated as any) : updated;
+    const mapped = updated?.user_id ? mapNotification(updated) : updated;
     return ResponseHelper.updated(
       mapped ?? { id, read: true },
       "Notificación marcada como leída"
